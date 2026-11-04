@@ -10,6 +10,9 @@ dist
 .eve
 .workflow-data
 
+# Local reference material
+.context
+
 # Node dependencies
 node_modules
 

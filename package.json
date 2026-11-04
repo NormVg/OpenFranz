@@ -11,11 +11,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@pinia/nuxt": "^1.0.3",
     "ai": "^7.0.162",
     "ai-sdk-ollama": "^4.6.2",
     "eve": "1.0.0-rc.3",
+    "lucide-vue-next": "^1.0.0",
     "markstream-vue": "^2.0.23",
     "nuxt": "^4.6.3",
+    "pinia": "^4.1.0",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0",
     "zod": "^4.6.7"
