@@ -2,11 +2,11 @@
 import { authClient } from "~/lib/auth-client";
 
 useHead({
-  title: "OpenFranz",
+  title: "OpenFranz — Self-learning content agent",
   meta: [
     {
       name: "description",
-      content: "A focused workspace for thinking through ideas and shipping the next version.",
+      content: "A self-learning content writing agent that grows with every conversation.",
     },
   ],
 });
@@ -35,149 +35,63 @@ async function signInWithGoogle() {
 
 <template>
   <main class="landing">
-    <header class="masthead">
-      <NuxtLink class="brand" to="/" aria-label="OpenFranz home">
-        <BrandMark class="mark" />
-        <span class="wordmark">OpenFranz</span>
-      </NuxtLink>
-      <p class="masthead-meta">Private workspace</p>
-    </header>
+    <section class="center" aria-labelledby="landing-title">
+      <BrandMark class="mark" />
 
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="kicker">A quieter place to build</p>
-        <h1 id="hero-title">
-          Make room<br />
-          <em>for the work.</em>
-        </h1>
-        <p class="lede">
-          OpenFranz is a focused chat workspace for thinking through ideas and
-          shipping the next version.
-        </p>
-
-        <div class="actions">
-          <NuxtLink v-if="session" class="action" to="/app">
-            Open chat
-          </NuxtLink>
-          <button
-            v-else
-            class="action"
-            type="button"
-            :disabled="signingIn"
-            @click="signInWithGoogle"
-          >
-            {{ signingIn ? "Connecting..." : "Continue with Google" }}
-          </button>
-          <p class="action-note">One account. Your chats stay yours.</p>
-        </div>
-
-        <p v-if="signInError" class="error" role="alert">{{ signInError }}</p>
+      <div class="copy">
+        <h1 id="landing-title">OpenFranz</h1>
+        <p>A self-learning content agent that grows with every conversation.</p>
       </div>
 
-      <aside class="aside" aria-label="Workspace notes">
-        <span class="aside-mark" aria-hidden="true"></span>
-        <p class="aside-copy">
-          One conversation at a time.<br />
-          Stored privately.<br />
-          Ready when you are.
-        </p>
-        <span class="aside-rule" aria-hidden="true"></span>
-        <p class="aside-meta">OpenFranz / 2026</p>
-      </aside>
-    </section>
+      <NuxtLink v-if="session" class="action" to="/app">
+        Open chat
+      </NuxtLink>
+      <button
+        v-else
+        class="action"
+        type="button"
+        :disabled="signingIn"
+        @click="signInWithGoogle"
+      >
+        {{ signingIn ? "Connecting..." : "Continue with Google" }}
+      </button>
 
-    <footer class="footer">
-      <span>Built for focused work</span>
-      <span class="footer-dot" aria-hidden="true"></span>
-      <span>Google sign-in only</span>
-    </footer>
+      <p v-if="signInError" class="error" role="alert">{{ signInError }}</p>
+    </section>
   </main>
 </template>
 
 <style scoped>
 .landing {
-  --landing-bg: #0d0d0c;
-  --landing-ink: #f2efe8;
-  --landing-muted: #8f8b83;
-  --landing-line: rgb(242 239 232 / 14%);
-  --landing-accent: #fbf3db;
-
   display: grid;
   min-height: 100dvh;
-  grid-template-rows: auto 1fr auto;
-  padding: 0 clamp(24px, 5vw, 72px);
-  background: var(--landing-bg);
-  color: var(--landing-ink);
-  font-family:
-    "SF Pro Display",
-    "Helvetica Neue",
-    "Switzer",
-    sans-serif;
+  place-items: center;
+  padding: 24px;
+  background: #0d0d0c;
+  color: #f2efe8;
 }
 
-.masthead {
+.center {
   display: flex;
-  min-height: 88px;
+  width: 100%;
+  max-width: 360px;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-bottom: 1px solid var(--landing-line);
-  animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  color: inherit;
-  text-decoration: none;
+  text-align: center;
 }
 
 .mark {
-  width: 28px;
-  height: 19px;
-  color: var(--landing-ink);
+  width: clamp(64px, 8vw, 88px);
+  height: auto;
+  color: #f2efe8;
+  animation: arrive 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.wordmark {
-  font-size: 14px;
-  letter-spacing: 0.02em;
-}
-
-.masthead-meta,
-.kicker,
-.action-note,
-.aside-meta,
-.footer {
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.masthead-meta {
-  color: var(--landing-muted);
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
-  gap: clamp(32px, 8vw, 120px);
-  align-items: end;
-  padding: clamp(64px, 12vh, 140px) 0 clamp(56px, 10vh, 120px);
-}
-
-.hero-copy {
-  max-width: 760px;
-}
-
-.kicker {
-  margin-bottom: 24px;
-  color: var(--landing-muted);
-  animation: rise 600ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
 }
 
 h1 {
@@ -188,51 +102,37 @@ h1 {
     Palatino,
     ui-serif,
     serif;
-  font-size: clamp(56px, 9vw, 112px);
+  font-size: clamp(30px, 4vw, 40px);
   font-weight: 400;
-  line-height: 0.94;
-  letter-spacing: -0.045em;
-  text-wrap: balance;
-  animation: rise 700ms 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  animation: arrive 600ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-h1 em {
-  color: var(--landing-muted);
-  font-style: italic;
-}
-
-.lede {
-  max-width: 480px;
-  margin-top: 32px;
-  font-size: clamp(15px, 1.4vw, 18px);
-  line-height: 1.65;
-  color: var(--landing-muted);
+.copy p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #8f8b83;
   text-wrap: pretty;
-  animation: rise 600ms 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 20px;
-  margin-top: 40px;
-  animation: rise 600ms 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: arrive 600ms 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .action {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 42px;
   align-items: center;
   justify-content: center;
+  margin-top: 28px;
   padding: 0 18px;
-  border: 1px solid var(--landing-ink);
+  border: 1px solid #f2efe8;
   border-radius: 4px;
-  background: var(--landing-ink);
-  color: var(--landing-bg);
+  background: #f2efe8;
+  color: #0d0d0c;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  animation: arrive 600ms 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transition:
     background-color 160ms ease-out,
     border-color 160ms ease-out,
@@ -253,76 +153,21 @@ h1 em {
   opacity: 0.55;
 }
 
-.action-note {
-  color: var(--landing-muted);
-  letter-spacing: 0.04em;
-  text-transform: none;
-}
-
-.aside {
-  display: flex;
-  align-self: stretch;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 18px;
-  padding: 0 0 8px 24px;
-  border-left: 1px solid var(--landing-line);
-  animation: rise 700ms 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.aside-mark {
-  width: 8px;
-  height: 8px;
-  background: var(--landing-accent);
-}
-
-.aside-copy {
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--landing-muted);
-}
-
-.aside-rule {
-  width: 100%;
-  height: 1px;
-  background: var(--landing-line);
-}
-
-.aside-meta {
-  color: var(--landing-muted);
-  letter-spacing: 0.12em;
-}
-
-.footer {
-  display: flex;
-  min-height: 72px;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  border-top: 1px solid var(--landing-line);
-  color: var(--landing-muted);
-  letter-spacing: 0.08em;
-  animation: rise 600ms 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.footer-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--landing-muted);
-}
-
 .error {
-  margin-top: 16px;
-  font-size: 13px;
+  margin-top: 18px;
+  font-family:
+    "SF Mono",
+    "JetBrains Mono",
+    monospace;
+  font-size: 11px;
   line-height: 1.5;
   color: #e8b4b0;
 }
 
-@keyframes rise {
+@keyframes arrive {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
 
   to {
@@ -331,33 +176,11 @@ h1 em {
   }
 }
 
-@media (max-width: 760px) {
-  .masthead {
-    min-height: 72px;
-  }
-
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 48px;
-    padding: 64px 0 56px;
-  }
-
-  .aside {
-    max-width: 320px;
-    padding: 20px 0 0;
-    border-top: 1px solid var(--landing-line);
-    border-left: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .masthead,
-  .kicker,
+  .mark,
   h1,
-  .lede,
-  .actions,
-  .aside,
-  .footer {
+  .copy p,
+  .action {
     animation: none;
   }
 
