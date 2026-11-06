@@ -1,4 +1,3 @@
-import { createError } from "h3";
 import {
   isAllowedRootDirectory,
   isVfsRoot,
@@ -23,6 +22,16 @@ import type {
 import * as vfsRepository from "../repositories/vfs.repository";
 import * as vfsLinkRepository from "../repositories/vfs-link.repository";
 import type { VfsLink, VfsNode } from "../db/schema/vfs";
+
+export class VfsServiceError extends Error {
+  readonly statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.name = "VfsServiceError";
+    this.statusCode = statusCode;
+  }
+}
 
 function toEntry(node: VfsNode): VfsEntry {
   return {
@@ -64,14 +73,11 @@ async function syncLinksForPath(path: string): Promise<void> {
 }
 
 function notFound(path: string) {
-  return createError({
-    statusCode: 404,
-    statusMessage: `Filesystem path not found: ${path}`,
-  });
+  return new VfsServiceError(404, `Filesystem path not found: ${path}`);
 }
 
 function conflict(message: string) {
-  return createError({ statusCode: 409, statusMessage: message });
+  return new VfsServiceError(409, message);
 }
 
 async function ensureDirectory(path: string): Promise<VfsNode> {
@@ -161,10 +167,7 @@ export async function writeFile(
 ): Promise<VfsEntry> {
   const normalized = normalizeVfsPath(path);
   if (isVfsRoot(normalized)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "The root path cannot be written as a file.",
-    });
+    throw new VfsServiceError(400, "The root path cannot be written as a file.");
   }
 
   if (violatesRootPolicy(normalized, "file")) {
@@ -219,20 +222,14 @@ export async function remove(
 ): Promise<boolean> {
   const normalized = normalizeVfsPath(path);
   if (isVfsRoot(normalized)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "The root path cannot be removed.",
-    });
+    throw new VfsServiceError(400, "The root path cannot be removed.");
   }
 
   if (
     parentVfsPath(normalized) === "/" &&
     isAllowedRootDirectory(vfsBasename(normalized))
   ) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "The root folders cannot be removed.",
-    });
+    throw new VfsServiceError(400, "The root folders cannot be removed.");
   }
 
   const node = await vfsRepository.findByPath(normalized);
@@ -255,10 +252,7 @@ export async function move(from: string, to: string): Promise<VfsEntry> {
   const destination = normalizeVfsPath(to);
 
   if (isVfsRoot(source) || isVfsRoot(destination)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "The root path cannot be moved.",
-    });
+    throw new VfsServiceError(400, "The root path cannot be moved.");
   }
 
   const node = await vfsRepository.findByPath(source);
@@ -269,10 +263,7 @@ export async function move(from: string, to: string): Promise<VfsEntry> {
     parentVfsPath(source) === "/" &&
     isAllowedRootDirectory(vfsBasename(source))
   ) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "The root folders cannot be moved.",
-    });
+    throw new VfsServiceError(400, "The root folders cannot be moved.");
   }
 
   if (

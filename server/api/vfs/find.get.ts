@@ -1,7 +1,7 @@
-import { vfs } from "~~/server/utils/vfs";
+import { defineVfsHandler, vfs } from "~~/server/utils/vfs";
 import { requireUser } from "~~/server/utils/require-user";
 
-export default defineEventHandler(async (event) => {
+export default defineVfsHandler(async (event) => {
   await requireUser(event);
   const query = getQuery(event);
   const q = typeof query.q === "string" ? query.q : "";
