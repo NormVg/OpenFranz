@@ -1,8 +1,10 @@
 import { createError } from "h3";
 import {
+  isAllowedRootDirectory,
   isVfsRoot,
   normalizeVfsPath,
   parentVfsPath,
+  VFS_ROOT_DIRECTORIES,
   vfsBasename,
 } from "../../shared/utils/vfs-path";
 import {
@@ -72,6 +74,17 @@ function conflict(message: string) {
 
 async function ensureDirectory(path: string): Promise<VfsNode> {
   const normalized = normalizeVfsPath(path);
+
+  if (
+    normalized !== "/" &&
+    parentVfsPath(normalized) === "/" &&
+    !isAllowedRootDirectory(vfsBasename(normalized))
+  ) {
+    throw conflict(
+      "Only /arsenal and /tecniques are allowed as root folders.",
+    );
+  }
+
   const existing = await vfsRepository.findByPath(normalized);
 
   if (existing) {
@@ -112,8 +125,16 @@ export async function stat(path: string): Promise<VfsEntry | null> {
   return node ? toEntry(node) : null;
 }
 
+async function ensureRootLayout(): Promise<void> {
+  for (const name of VFS_ROOT_DIRECTORIES) {
+    await ensureDirectory(`/${name}`);
+  }
+}
+
 export async function list(path: string): Promise<VfsEntry[]> {
   const normalized = normalizeVfsPath(path);
+  if (normalized === "/") await ensureRootLayout();
+
   const node = await vfsRepository.findByPath(normalized);
 
   if (!node) throw notFound(normalized);
@@ -204,6 +225,16 @@ export async function remove(
     });
   }
 
+  if (
+    parentVfsPath(normalized) === "/" &&
+    isAllowedRootDirectory(vfsBasename(normalized))
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "The root folders cannot be removed.",
+    });
+  }
+
   const node = await vfsRepository.findByPath(normalized);
   if (!node) return false;
 
@@ -232,6 +263,27 @@ export async function move(from: string, to: string): Promise<VfsEntry> {
 
   const node = await vfsRepository.findByPath(source);
   if (!node) throw notFound(source);
+
+  if (
+    node.type === "dir" &&
+    parentVfsPath(source) === "/" &&
+    isAllowedRootDirectory(vfsBasename(source))
+  ) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "The root folders cannot be moved.",
+    });
+  }
+
+  if (
+    node.type === "dir" &&
+    parentVfsPath(destination) === "/" &&
+    !isAllowedRootDirectory(vfsBasename(destination))
+  ) {
+    throw conflict(
+      "Only /arsenal and /tecniques are allowed as root folders.",
+    );
+  }
 
   const existing = await vfsRepository.findByPath(destination);
   if (existing) throw conflict(`${destination} already exists.`);
@@ -383,6 +435,8 @@ export async function pathBetween(
 }
 
 export async function graph(): Promise<VfsGraph> {
+  await ensureRootLayout();
+
   const [nodes, edges] = await Promise.all([
     vfsRepository.listAllNodes(),
     vfsLinkRepository.listAllLinks(),

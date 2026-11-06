@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  isAllowedRootDirectory,
   isVfsRoot,
   joinVfsPath,
   normalizeVfsPath,
@@ -37,6 +38,12 @@ test("joins paths safely", () => {
 test("recognizes the root path", () => {
   assert.equal(isVfsRoot("/"), true);
   assert.equal(isVfsRoot("/a"), false);
+});
+
+test("allows only arsenal and tecniques as root folders", () => {
+  assert.equal(isAllowedRootDirectory("arsenal"), true);
+  assert.equal(isAllowedRootDirectory("tecniques"), true);
+  assert.equal(isAllowedRootDirectory("notes"), false);
 });
 
 test("rejects null bytes and overlong paths", () => {

@@ -1,5 +1,11 @@
 const MAX_PATH_LENGTH = 1024;
 
+export const VFS_ROOT_DIRECTORIES = ["arsenal", "tecniques"] as const;
+
+export function isAllowedRootDirectory(name: string): boolean {
+  return (VFS_ROOT_DIRECTORIES as readonly string[]).includes(name);
+}
+
 export class VfsPathError extends Error {
   constructor(message: string) {
     super(message);
