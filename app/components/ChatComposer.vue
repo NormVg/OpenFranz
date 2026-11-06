@@ -22,6 +22,7 @@ const props = withDefaults(
     modelValue: string;
     disabled?: boolean;
     busy?: boolean;
+    submitting?: boolean;
     stopping?: boolean;
     placeholder?: string;
     autofocus?: boolean;
@@ -29,6 +30,7 @@ const props = withDefaults(
   {
     disabled: false,
     busy: false,
+    submitting: false,
     stopping: false,
     placeholder: "Ask anything...",
     autofocus: false,
@@ -51,7 +53,8 @@ const canSend = computed(
   () =>
     (props.modelValue.trim().length > 0 || attachments.value.length > 0) &&
     !props.disabled &&
-    !props.busy,
+    !props.busy &&
+    !props.submitting,
 );
 
 function onInput(event: Event) {
@@ -220,7 +223,7 @@ onBeforeUnmount(clearAttachments);
       <div class="composer-actions">
         <button
           v-if="busy"
-          class="icon-button stop"
+          class="stop-button"
           type="button"
           :disabled="stopping"
           aria-label="Stop response"
@@ -228,6 +231,7 @@ onBeforeUnmount(clearAttachments);
         >
           <Loader2Icon v-if="stopping" class="icon spin" />
           <SquareIcon v-else class="icon fill" />
+          <span>{{ stopping ? "Stopping" : "Stop" }}</span>
         </button>
         <button
           v-else
@@ -409,13 +413,42 @@ onBeforeUnmount(clearAttachments);
   opacity: 0.3;
 }
 
-.icon-button.stop {
-  background: color-mix(in oklab, var(--foreground) 15%, transparent);
-  color: color-mix(in oklab, var(--foreground) 55%, transparent);
+.stop-button {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--destructive) 14%, transparent);
+  color: var(--destructive);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 150ms ease-out;
 }
 
-.icon-button.stop:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--foreground) 25%, transparent);
+.stop-button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--destructive) 60%, transparent);
+  background: color-mix(in oklab, var(--destructive) 22%, transparent);
+}
+
+.stop-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.stop-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.stop-button .icon {
+  width: 11px;
+  height: 11px;
 }
 
 .icon {

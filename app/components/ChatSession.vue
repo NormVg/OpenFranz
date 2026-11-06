@@ -6,6 +6,7 @@ import type {
   SessionStreamEvent,
 } from "eve/client";
 import { activeTurn } from "eve/events";
+import { ArrowDownIcon } from "lucide-vue-next";
 import { useStickToBottom } from "markstream-vue/utils";
 import { createTitle } from "~~/shared/utils/chat";
 import { useChatStore } from "~/stores/chat";
@@ -26,6 +27,10 @@ const chatStore = useChatStore();
 const localChatId = ref<string | null>(props.chatId);
 const draft = ref("");
 const isStopping = ref(false);
+const isSubmitting = ref(false);
+
+const SUBMIT_DEBOUNCE_MS = 350;
+let lastSubmitAt = 0;
 
 function plain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -42,7 +47,10 @@ const { messages, status, error, view, session, events, send, cancel } =
 
 const scroller = ref<HTMLElement | null>(null);
 const contentRoot = ref<HTMLElement | null>(null);
-const { scheduleScrollToBottom } = useStickToBottom(scroller, contentRoot);
+const { scrollToBottom, bottomPinned } = useStickToBottom(
+  scroller,
+  contentRoot,
+);
 
 const isBusy = computed(() => status.value === "busy");
 const isResuming = computed(() => status.value === "resuming");
@@ -109,30 +117,42 @@ async function buildMessageContent(
 async function submit(files: File[] = []) {
   const text = draft.value.trim();
   if ((!text && files.length === 0) || isBusy.value || isResuming.value) return;
+  if (isSubmitting.value) return;
 
-  if (!localChatId.value) {
+  const now = Date.now();
+  if (now - lastSubmitAt < SUBMIT_DEBOUNCE_MS) return;
+  lastSubmitAt = now;
+
+  isSubmitting.value = true;
+
+  try {
+    if (!localChatId.value) {
+      try {
+        const chat = await chatStore.addChat(
+          createTitle(text || files[0]?.name || "New chat"),
+        );
+        localChatId.value = chat.id;
+      } catch {
+        chatStore.setError("Unable to create this chat. Please try again.");
+        return;
+      }
+    }
+
+    let content: MessageContent;
     try {
-      const chat = await chatStore.addChat(
-        createTitle(text || files[0]?.name || "New chat"),
-      );
-      localChatId.value = chat.id;
+      content = await buildMessageContent(text, files);
     } catch {
-      chatStore.setError("Unable to create this chat. Please try again.");
+      chatStore.setError("Unable to read that image. Please try again.");
       return;
     }
-  }
 
-  let content: MessageContent;
-  try {
-    content = await buildMessageContent(text, files);
-  } catch {
-    chatStore.setError("Unable to read that image. Please try again.");
-    return;
+    draft.value = "";
+    await send(content);
+    await nextTick();
+    scrollToBottom();
+  } finally {
+    isSubmitting.value = false;
   }
-
-  draft.value = "";
-  await send(content);
-  scheduleScrollToBottom();
 }
 
 async function stop() {
@@ -146,9 +166,17 @@ async function stop() {
   }
 }
 
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key !== "Escape" || !isBusy.value) return;
+  event.preventDefault();
+  void stop();
+}
+
 watch(
   () => messages.value.length,
-  () => scheduleScrollToBottom(),
+  () => {
+    void nextTick(scrollToBottom);
+  },
 );
 
 watch(
@@ -162,9 +190,13 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => scheduleScrollToBottom());
+onMounted(() => {
+  window.addEventListener("keydown", onWindowKeydown);
+  scrollToBottom();
+});
 
 onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onWindowKeydown);
   if (saveTimer) clearTimeout(saveTimer);
   persist();
 });
@@ -183,6 +215,7 @@ onBeforeUnmount(() => {
           v-model="draft"
           autofocus
           :busy="isBusy"
+          :submitting="isSubmitting"
           :stopping="isStopping"
           :disabled="isResuming"
           @submit="submit"
@@ -192,15 +225,27 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else>
-      <div ref="scroller" class="conversation" role="log">
-        <div ref="contentRoot" class="conversation-content">
-          <ChatMessage
-            v-for="message in messages"
-            :key="message.id"
-            :message="message"
-            :is-dark="isDark"
-          />
+      <div class="conversation-wrap">
+        <div ref="scroller" class="conversation" role="log">
+          <div ref="contentRoot" class="conversation-content">
+            <ChatMessage
+              v-for="message in messages"
+              :key="message.id"
+              :message="message"
+              :is-dark="isDark"
+            />
+          </div>
         </div>
+
+        <button
+          v-if="!bottomPinned"
+          class="scroll-bottom"
+          type="button"
+          aria-label="Scroll to latest message"
+          @click="scrollToBottom"
+        >
+          <ArrowDownIcon class="scroll-bottom-icon" />
+        </button>
       </div>
 
       <div class="composer-wrap">
@@ -208,6 +253,7 @@ onBeforeUnmount(() => {
         <ChatComposer
           v-model="draft"
           :busy="isBusy"
+          :submitting="isSubmitting"
           :stopping="isStopping"
           :disabled="isResuming"
           @submit="submit"
@@ -272,6 +318,13 @@ onBeforeUnmount(() => {
   color: var(--muted-foreground);
 }
 
+.conversation-wrap {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
 .conversation {
   position: relative;
   min-height: 0;
@@ -281,6 +334,40 @@ onBeforeUnmount(() => {
   scrollbar-color: var(--border) transparent;
 }
 
+.scroll-bottom {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  color: var(--muted-foreground);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out,
+    transform 150ms ease-out;
+}
+
+.scroll-bottom:hover {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.scroll-bottom:active {
+  transform: scale(0.94);
+}
+
+.scroll-bottom-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .conversation-content {
   display: flex;
   width: 100%;
@@ -288,7 +375,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 24px 16px 32px;
 }
 
 .composer-wrap {
@@ -313,7 +400,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 640px) {
   .conversation-content {
-    padding: 24px;
+    padding: 24px 24px 32px;
   }
 
   .composer-wrap {
