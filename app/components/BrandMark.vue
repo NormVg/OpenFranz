@@ -1,11 +1,17 @@
 <template>
   <svg
     class="brand-mark"
-    viewBox="0 0 96 64"
+    viewBox="-1 -1 98 66"
     fill="none"
     aria-hidden="true"
   >
-    <path d="M0 0H96L74 32L96 64H0Z" fill="currentColor" />
+    <path
+      d="M0 0H96L74 32L96 64H0Z"
+      fill="currentColor"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
   </svg>
 </template>
 
