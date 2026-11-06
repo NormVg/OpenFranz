@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { ClientSessionState, SessionStreamEvent } from "eve/client";
+import type {
+  ClientSessionState,
+  MessageContent,
+  MessagePart,
+  SessionStreamEvent,
+} from "eve/client";
 import { activeTurn } from "eve/events";
 import { useStickToBottom } from "markstream-vue/utils";
 import { createTitle } from "~~/shared/utils/chat";
@@ -42,9 +47,6 @@ const { scheduleScrollToBottom } = useStickToBottom(scroller, contentRoot);
 const isBusy = computed(() => status.value === "busy");
 const isResuming = computed(() => status.value === "resuming");
 const isTurnOpen = computed(() => activeTurn(view.value) !== undefined);
-const canSend = computed(
-  () => draft.value.trim().length > 0 && !isBusy.value && !isResuming.value,
-);
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -67,13 +69,52 @@ function schedulePersist() {
   saveTimer = setTimeout(persist, 400);
 }
 
-async function submit() {
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("The image could not be read."));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("The image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function buildMessageContent(
+  text: string,
+  files: File[],
+): Promise<MessageContent> {
+  if (files.length === 0) return text;
+
+  const parts: MessagePart[] = [];
+  if (text) parts.push({ type: "text", text });
+
+  for (const file of files) {
+    parts.push({
+      type: "file",
+      mediaType: file.type || "application/octet-stream",
+      filename: file.name,
+      data: await fileToDataUrl(file),
+    });
+  }
+
+  return parts;
+}
+
+async function submit(files: File[] = []) {
   const text = draft.value.trim();
-  if (!text || !canSend.value) return;
+  if ((!text && files.length === 0) || isBusy.value || isResuming.value) return;
 
   if (!localChatId.value) {
     try {
-      const chat = await chatStore.addChat(createTitle(text));
+      const chat = await chatStore.addChat(
+        createTitle(text || files[0]?.name || "New chat"),
+      );
       localChatId.value = chat.id;
     } catch {
       chatStore.setError("Unable to create this chat. Please try again.");
@@ -81,8 +122,16 @@ async function submit() {
     }
   }
 
+  let content: MessageContent;
+  try {
+    content = await buildMessageContent(text, files);
+  } catch {
+    chatStore.setError("Unable to read that image. Please try again.");
+    return;
+  }
+
   draft.value = "";
-  await send(text);
+  await send(content);
   scheduleScrollToBottom();
 }
 

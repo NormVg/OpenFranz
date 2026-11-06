@@ -32,9 +32,17 @@ const isUser = computed(() => props.message.role === "user");
         <span v-else-if="part.type === 'tool'" class="chip">
           {{ part.label }}
         </span>
-        <span v-else-if="part.type === 'file'" class="chip">
-          {{ part.filename ?? "Attachment" }}
-        </span>
+        <template v-else-if="part.type === 'file'">
+          <img
+            v-if="part.mediaType.startsWith('image/') && part.url"
+            class="attachment-image"
+            :src="part.url"
+            :alt="part.filename ?? 'Attached image'"
+          />
+          <span v-else class="chip">
+            {{ part.filename ?? "Attachment" }}
+          </span>
+        </template>
       </template>
     </div>
   </article>
@@ -111,6 +119,16 @@ const isUser = computed(() => props.message.role === "user");
   line-height: 1.5;
   color: var(--muted-foreground);
   white-space: pre-wrap;
+}
+
+.attachment-image {
+  display: block;
+  max-width: min(320px, 100%);
+  max-height: 320px;
+  margin: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .chip {
