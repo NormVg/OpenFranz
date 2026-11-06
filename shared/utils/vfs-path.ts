@@ -2,8 +2,25 @@ const MAX_PATH_LENGTH = 1024;
 
 export const VFS_ROOT_DIRECTORIES = ["arsenal", "tecniques"] as const;
 
+export const VFS_ROOT_POLICY_MESSAGE =
+  "Only the /arsenal and /tecniques folders are allowed at the root.";
+
+export type VfsEntryType = "file" | "directory";
+
 export function isAllowedRootDirectory(name: string): boolean {
   return (VFS_ROOT_DIRECTORIES as readonly string[]).includes(name);
+}
+
+/**
+ * The root may contain exactly two directories and nothing else.
+ * Paths below the first level are unrestricted.
+ */
+export function violatesRootPolicy(path: string, type: VfsEntryType): boolean {
+  const normalized = normalizeVfsPath(path);
+  if (isVfsRoot(normalized)) return false;
+  if (parentVfsPath(normalized) !== "/") return false;
+
+  return type !== "directory" || !isAllowedRootDirectory(vfsBasename(normalized));
 }
 
 export class VfsPathError extends Error {

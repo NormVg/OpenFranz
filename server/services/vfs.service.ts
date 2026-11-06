@@ -5,7 +5,9 @@ import {
   normalizeVfsPath,
   parentVfsPath,
   VFS_ROOT_DIRECTORIES,
+  VFS_ROOT_POLICY_MESSAGE,
   vfsBasename,
+  violatesRootPolicy,
 } from "../../shared/utils/vfs-path";
 import {
   extractVfsLinks,
@@ -75,14 +77,8 @@ function conflict(message: string) {
 async function ensureDirectory(path: string): Promise<VfsNode> {
   const normalized = normalizeVfsPath(path);
 
-  if (
-    normalized !== "/" &&
-    parentVfsPath(normalized) === "/" &&
-    !isAllowedRootDirectory(vfsBasename(normalized))
-  ) {
-    throw conflict(
-      "Only /arsenal and /tecniques are allowed as root folders.",
-    );
+  if (violatesRootPolicy(normalized, "directory")) {
+    throw conflict(VFS_ROOT_POLICY_MESSAGE);
   }
 
   const existing = await vfsRepository.findByPath(normalized);
@@ -169,6 +165,10 @@ export async function writeFile(
       statusCode: 400,
       statusMessage: "The root path cannot be written as a file.",
     });
+  }
+
+  if (violatesRootPolicy(normalized, "file")) {
+    throw conflict(VFS_ROOT_POLICY_MESSAGE);
   }
 
   const parent = parentVfsPath(normalized);
@@ -276,13 +276,12 @@ export async function move(from: string, to: string): Promise<VfsEntry> {
   }
 
   if (
-    node.type === "dir" &&
-    parentVfsPath(destination) === "/" &&
-    !isAllowedRootDirectory(vfsBasename(destination))
+    violatesRootPolicy(
+      destination,
+      node.type === "dir" ? "directory" : "file",
+    )
   ) {
-    throw conflict(
-      "Only /arsenal and /tecniques are allowed as root folders.",
-    );
+    throw conflict(VFS_ROOT_POLICY_MESSAGE);
   }
 
   const existing = await vfsRepository.findByPath(destination);

@@ -7,6 +7,7 @@ import {
   normalizeVfsPath,
   parentVfsPath,
   vfsBasename,
+  violatesRootPolicy,
 } from "../shared/utils/vfs-path.ts";
 
 test("normalizes relative and repeated separators", () => {
@@ -44,6 +45,23 @@ test("allows only arsenal and tecniques as root folders", () => {
   assert.equal(isAllowedRootDirectory("arsenal"), true);
   assert.equal(isAllowedRootDirectory("tecniques"), true);
   assert.equal(isAllowedRootDirectory("notes"), false);
+});
+
+test("rejects every root entry except the two allowed folders", () => {
+  assert.equal(violatesRootPolicy("/", "directory"), false);
+  assert.equal(violatesRootPolicy("/arsenal", "directory"), false);
+  assert.equal(violatesRootPolicy("/tecniques", "directory"), false);
+
+  assert.equal(violatesRootPolicy("/notes", "directory"), true);
+  assert.equal(violatesRootPolicy("/notes.md", "file"), true);
+  assert.equal(violatesRootPolicy("/arsenal", "file"), true);
+  assert.equal(violatesRootPolicy("/tecniques", "file"), true);
+});
+
+test("allows any entry below the first level", () => {
+  assert.equal(violatesRootPolicy("/arsenal/notes.md", "file"), false);
+  assert.equal(violatesRootPolicy("/arsenal/deep/notes.md", "file"), false);
+  assert.equal(violatesRootPolicy("/tecniques/drafts", "directory"), false);
 });
 
 test("rejects null bytes and overlong paths", () => {
