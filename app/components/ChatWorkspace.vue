@@ -44,9 +44,10 @@ onMounted(async () => {
   }
 });
 
-const activeView = computed<"chat" | "files" | "brands">(() => {
+const activeView = computed<"chat" | "files" | "brands" | "ingest">(() => {
   if (route.query.view === "files") return "files";
   if (route.query.view === "brands") return "brands";
+  if (route.query.view === "ingest") return "ingest";
   return "chat";
 });
 
@@ -61,6 +62,7 @@ const activeTitle = computed(() => {
 const topbarTitle = computed(() => {
   if (activeView.value === "files") return "Files";
   if (activeView.value === "brands") return "Brands";
+  if (activeView.value === "ingest") return "Ingest";
   return activeTitle.value;
 });
 
@@ -166,6 +168,7 @@ async function removeChat(id: string) {
 
       <VfsExplorer v-if="activeView === 'files'" />
       <BrandsExplorer v-else-if="activeView === 'brands'" />
+      <IngestExplorer v-else-if="activeView === 'ingest'" />
       <template v-else>
         <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
 

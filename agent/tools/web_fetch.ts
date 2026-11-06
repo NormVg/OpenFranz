@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { webFetch } from "../lib/ollama-web";
+import { webFetch } from "../../server/utils/ollama-web";
 import { runTool } from "../lib/tool-result";
 
 export default defineTool({

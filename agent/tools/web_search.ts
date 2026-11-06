@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { webSearch } from "../lib/ollama-web";
+import { webSearch } from "../../server/utils/ollama-web";
 import { runTool } from "../lib/tool-result";
 
 export default defineTool({

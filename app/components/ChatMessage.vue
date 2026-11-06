@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import type { EveMessage, EveMessagePart } from "eve/client";
-import { CheckIcon, ChevronDownIcon, CopyIcon } from "lucide-vue-next";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  TagIcon,
+} from "lucide-vue-next";
 import { MarkdownRender } from "markstream-vue";
+import { parseBrandContext } from "~~/shared/utils/brand-context";
 
 const props = defineProps<{
   message: EveMessage;
@@ -9,6 +15,23 @@ const props = defineProps<{
 }>();
 
 const isUser = computed(() => props.message.role === "user");
+
+const userBrand = computed(() => {
+  if (!isUser.value) return null;
+
+  const text = props.message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n\n");
+  const parsed = parseBrandContext(text);
+
+  if (!parsed.slug) return null;
+  return { slug: parsed.slug, name: parsed.name ?? parsed.slug };
+});
+
+function displayText(text: string): string {
+  return parseBrandContext(text).text;
+}
 
 function isPartStreaming(part: EveMessagePart): boolean {
   return "state" in part && part.state === "streaming";
@@ -85,6 +108,11 @@ onBeforeUnmount(() => {
 <template>
   <article class="message" :data-role="message.role">
     <div :class="isUser ? 'user-bubble' : 'assistant-body'">
+      <div v-if="isUser && userBrand" class="user-brand">
+        <TagIcon class="user-brand-icon" aria-hidden="true" />
+        {{ userBrand.name }}
+      </div>
+
       <div v-if="!isUser && reasoningText" class="reasoning-block">
         <button
           class="reasoning-toggle"
@@ -125,7 +153,9 @@ onBeforeUnmount(() => {
           :fade="false"
           :is-dark="isDark"
         />
-        <p v-else-if="part.type === 'text'" class="user-text">{{ part.text }}</p>
+        <p v-else-if="part.type === 'text'" class="user-text">
+          {{ displayText(part.text) }}
+        </p>
         <span v-else-if="part.type === 'tool'" class="chip">
           {{ part.label }}
         </span>
@@ -196,6 +226,23 @@ onBeforeUnmount(() => {
 .user-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.user-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  border-radius: 999px;
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+}
+
+.user-brand-icon {
+  width: 10px;
+  height: 10px;
 }
 
 .markdown {

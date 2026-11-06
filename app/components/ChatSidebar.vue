@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   FolderIcon,
+  InboxIcon,
   LogOutIcon,
   MessageSquareIcon,
   PanelLeftCloseIcon,
@@ -16,7 +17,7 @@ const props = withDefaults(
     activeChatId: string | null;
     collapsed: boolean;
     showToggle?: boolean;
-    activeView?: "chat" | "files" | "brands";
+    activeView?: "chat" | "files" | "brands" | "ingest";
     user?: {
       name: string;
       email: string;
@@ -91,6 +92,14 @@ const initials = computed(() => {
         <TagIcon class="icon" />
         Brands
       </NuxtLink>
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'ingest' }"
+        to="/app?view=ingest"
+      >
+        <InboxIcon class="icon" />
+        Ingest
+      </NuxtLink>
     </nav>
 
     <button
@@ -100,7 +109,7 @@ const initials = computed(() => {
       @click="emit('new-chat')"
     >
       <PlusIcon class="icon" />
-      New session
+      New chat
     </button>
 
     <div class="history">
@@ -323,9 +332,7 @@ const initials = computed(() => {
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.9) inset,
     0 -1px 0 rgb(0 0 0 / 0.28) inset,
-    0 1px 2px rgb(0 0 0 / 0.4),
-    0 8px 20px rgb(190 200 216 / 0.2),
-    0 0 26px rgb(200 210 228 / 0.16);
+    0 1px 2px rgb(0 0 0 / 0.4);
   transition:
     box-shadow 180ms ease-out,
     filter 150ms ease-out,

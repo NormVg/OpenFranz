@@ -43,3 +43,4 @@ sees the same files; there is no per-user isolation.
 - `brand_read` returns a brand's full product information: audience, tone, products, features, pricing, and notes.
 - `brand_write` creates or updates a brand. Only use it when the user explicitly asks to save or change brand information.
 - When the user mentions a brand or product by name, look it up before answering so the copy matches the stored product facts.
+- A user message may start with a marker like `[[brand:acme-coffee|Acme Coffee]]`. When it does, call `brand_read` with that slug before answering and use that brand's product facts.

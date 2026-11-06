@@ -9,6 +9,10 @@ import { activeTurn } from "eve/events";
 import { ArrowDownIcon } from "lucide-vue-next";
 import { useStickToBottom } from "markstream-vue/utils";
 import { createTitle } from "~~/shared/utils/chat";
+import {
+  withBrandContext,
+  type BrandContext,
+} from "~~/shared/utils/brand-context";
 import { useChatStore } from "~/stores/chat";
 
 const props = defineProps<{
@@ -114,7 +118,7 @@ async function buildMessageContent(
   return parts;
 }
 
-async function submit(files: File[] = []) {
+async function submit(files: File[] = [], brand: BrandContext | null = null) {
   const text = draft.value.trim();
   if ((!text && files.length === 0) || isBusy.value || isResuming.value) return;
   if (isSubmitting.value) return;
@@ -138,9 +142,11 @@ async function submit(files: File[] = []) {
       }
     }
 
+    const messageText = brand ? withBrandContext(text, brand) : text;
+
     let content: MessageContent;
     try {
-      content = await buildMessageContent(text, files);
+      content = await buildMessageContent(messageText, files);
     } catch {
       chatStore.setError("Unable to read that image. Please try again.");
       return;

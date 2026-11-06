@@ -3,13 +3,18 @@ import {
   ArrowUpIcon,
   ImagePlusIcon,
   Loader2Icon,
+  SearchIcon,
   SquareIcon,
+  TagIcon,
   XIcon,
 } from "lucide-vue-next";
+import type { BrandRecord } from "~~/shared/types/brand";
+import type { BrandContext } from "~~/shared/utils/brand-context";
 import {
   MAX_CHAT_ATTACHMENTS,
   validateChatAttachment,
 } from "~~/shared/utils/chat-attachments";
+import { brandService } from "~/services/brand.service";
 
 interface ChatAttachment {
   id: string;
@@ -39,7 +44,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: "update:modelValue", value: string): void;
-  (event: "submit", files: File[]): void;
+  (event: "submit", files: File[], brand: BrandContext | null): void;
   (event: "stop"): void;
 }>();
 
@@ -48,6 +53,20 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const attachments = ref<ChatAttachment[]>([]);
 const attachmentError = ref<string | null>(null);
 const isDragging = ref(false);
+const brands = shallowRef<BrandRecord[]>([]);
+const brandMenuOpen = ref(false);
+const brandQuery = ref("");
+const brandLoading = ref(false);
+const selectedBrand = ref<BrandRecord | null>(null);
+
+const filteredBrands = computed(() => {
+  const query = brandQuery.value.trim().toLowerCase();
+  if (!query) return brands.value;
+
+  return brands.value.filter((brand) =>
+    [brand.name, brand.summary].join(" ").toLowerCase().includes(query),
+  );
+});
 
 const canSend = computed(
   () =>
@@ -94,16 +113,53 @@ function clearAttachments() {
   attachments.value = [];
 }
 
+async function toggleBrandMenu() {
+  brandMenuOpen.value = !brandMenuOpen.value;
+  if (!brandMenuOpen.value || brands.value.length > 0) return;
+
+  brandLoading.value = true;
+
+  try {
+    brands.value = await brandService.list();
+  } catch {
+    brands.value = [];
+  } finally {
+    brandLoading.value = false;
+  }
+}
+
+function selectBrand(brand: BrandRecord) {
+  selectedBrand.value = brand;
+  brandMenuOpen.value = false;
+  brandQuery.value = "";
+}
+
+function clearBrand() {
+  selectedBrand.value = null;
+}
+
 function submit() {
   if (!canSend.value) return;
 
   const files = attachments.value.map((attachment) => attachment.file);
-  emit("submit", files);
+  emit(
+    "submit",
+    files,
+    selectedBrand.value
+      ? { slug: selectedBrand.value.slug, name: selectedBrand.value.name }
+      : null,
+  );
   clearAttachments();
+  selectedBrand.value = null;
   attachmentError.value = null;
 }
 
 function onKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape" && brandMenuOpen.value) {
+    brandMenuOpen.value = false;
+    return;
+  }
+
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     submit();
@@ -180,6 +236,19 @@ onBeforeUnmount(clearAttachments);
       </figure>
     </div>
 
+    <div v-if="selectedBrand" class="brand-chip">
+      <TagIcon class="brand-chip-icon" aria-hidden="true" />
+      <span class="brand-chip-name">{{ selectedBrand.name }}</span>
+      <button
+        class="brand-chip-remove"
+        type="button"
+        aria-label="Remove brand"
+        @click="clearBrand"
+      >
+        <XIcon class="brand-chip-x" aria-hidden="true" />
+      </button>
+    </div>
+
     <label class="sr-only" for="chat-composer">Message the agent</label>
     <textarea
       id="chat-composer"
@@ -218,6 +287,17 @@ onBeforeUnmount(clearAttachments);
         >
           <ImagePlusIcon class="icon" />
         </button>
+        <button
+          class="icon-button attach"
+          type="button"
+          :disabled="disabled || busy"
+          aria-label="Attach a brand"
+          title="Attach a brand"
+          :aria-expanded="brandMenuOpen"
+          @click="toggleBrandMenu"
+        >
+          <TagIcon class="icon" />
+        </button>
       </div>
 
       <div class="composer-actions">
@@ -243,6 +323,49 @@ onBeforeUnmount(clearAttachments);
           <ArrowUpIcon class="icon" />
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="brandMenuOpen"
+      class="brand-backdrop"
+      @click="brandMenuOpen = false"
+    />
+    <div
+      v-if="brandMenuOpen"
+      class="brand-menu"
+      role="listbox"
+      aria-label="Brands"
+    >
+      <div class="brand-search">
+        <SearchIcon class="brand-search-icon" aria-hidden="true" />
+        <input
+          v-model="brandQuery"
+          class="brand-search-input"
+          type="search"
+          placeholder="Search brands"
+          aria-label="Search brands"
+        />
+      </div>
+
+      <p v-if="brandLoading" class="brand-state">Loading...</p>
+      <p v-else-if="filteredBrands.length === 0" class="brand-state">
+        No brands yet.
+      </p>
+      <button
+        v-for="brand in filteredBrands"
+        :key="brand.id"
+        class="brand-option"
+        type="button"
+        role="option"
+        :aria-selected="selectedBrand?.id === brand.id"
+        @click="selectBrand(brand)"
+      >
+        <span class="brand-option-name">{{ brand.name }}</span>
+        <span class="brand-option-meta">
+          {{ brand.products.length }}
+          {{ brand.products.length === 1 ? "product" : "products" }}
+        </span>
+      </button>
     </div>
 
     <div v-if="isDragging" class="drop-overlay" aria-hidden="true">
@@ -313,6 +436,139 @@ onBeforeUnmount(clearAttachments);
 .remove-icon {
   width: 11px;
   height: 11px;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 10px 12px 0;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.brand-chip-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.brand-chip-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-chip-remove {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.brand-chip-remove:hover {
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
+.brand-chip-x {
+  width: 10px;
+  height: 10px;
+}
+
+.brand-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.brand-menu {
+  position: absolute;
+  bottom: 46px;
+  left: 10px;
+  z-index: 20;
+  display: flex;
+  width: 250px;
+  max-height: 300px;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+}
+
+.brand-search {
+  position: relative;
+  padding: 2px 2px 6px;
+}
+
+.brand-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 12px;
+  height: 12px;
+  color: var(--muted-foreground);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.brand-search-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px 0 26px;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--muted) 25%, transparent);
+  color: var(--foreground);
+  font-size: 12px;
+  outline: none;
+}
+
+.brand-state {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.brand-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+
+.brand-option:hover,
+.brand-option[aria-selected="true"] {
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  color: var(--foreground);
+}
+
+.brand-option-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.brand-option-meta {
+  font-size: 10.5px;
+  color: var(--muted-foreground);
 }
 
 .composer-input {
