@@ -15,6 +15,13 @@
       "when": 1793996418423,
       "tag": "0001_hesitant_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793997988978,
+      "tag": "0002_loving_loners",
+      "breakpoints": true
     }
   ]
 }

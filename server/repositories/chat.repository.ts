@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { ChatPatch, ChatRecord } from "~~/shared/types/chat";
 import { getDatabase } from "../db/client";
 import { chats } from "../db/schema";
@@ -15,30 +15,26 @@ function toRecord(row: ChatRow): ChatRecord {
   };
 }
 
-export async function listByUser(userId: string): Promise<ChatRecord[]> {
+export async function listAll(): Promise<ChatRecord[]> {
   const rows = await getDatabase()
     .select()
     .from(chats)
-    .where(eq(chats.userId, userId))
     .orderBy(desc(chats.updatedAt));
 
   return rows.map(toRecord);
 }
 
-export async function findByIdForUser(
-  id: string,
-  userId: string,
-): Promise<ChatRecord | null> {
+export async function findById(id: string): Promise<ChatRecord | null> {
   const [row] = await getDatabase()
     .select()
     .from(chats)
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
+    .where(eq(chats.id, id))
     .limit(1);
 
   return row ? toRecord(row) : null;
 }
 
-export async function createForUser(
+export async function create(
   userId: string,
   title: string,
 ): Promise<ChatRecord> {
@@ -51,9 +47,8 @@ export async function createForUser(
   return toRecord(row);
 }
 
-export async function updateForUser(
+export async function update(
   id: string,
-  userId: string,
   patch: ChatPatch,
 ): Promise<ChatRecord | null> {
   const values: Partial<typeof chats.$inferInsert> = {
@@ -67,19 +62,16 @@ export async function updateForUser(
   const [row] = await getDatabase()
     .update(chats)
     .set(values)
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
+    .where(eq(chats.id, id))
     .returning();
 
   return row ? toRecord(row) : null;
 }
 
-export async function deleteForUser(
-  id: string,
-  userId: string,
-): Promise<boolean> {
+export async function deleteById(id: string): Promise<boolean> {
   const [row] = await getDatabase()
     .delete(chats)
-    .where(and(eq(chats.id, id), eq(chats.userId, userId)))
+    .where(eq(chats.id, id))
     .returning({ id: chats.id });
 
   return Boolean(row);

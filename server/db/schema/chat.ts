@@ -18,5 +18,5 @@ export const chats = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("chats_user_updated_idx").on(table.userId, table.updatedAt)],
+  (table) => [index("chats_updated_idx").on(table.updatedAt)],
 );

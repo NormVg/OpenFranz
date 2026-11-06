@@ -14,22 +14,19 @@ function parseChatId(id: string | undefined): string {
   return parsed.data;
 }
 
-export function listChatsForUser(userId: string): Promise<ChatRecord[]> {
-  return chatRepository.listByUser(userId);
+export function listChats(): Promise<ChatRecord[]> {
+  return chatRepository.listAll();
 }
 
-export async function getChatForUser(
-  userId: string,
-  id: string | undefined,
-): Promise<ChatRecord> {
-  const chat = await chatRepository.findByIdForUser(parseChatId(id), userId);
+export async function getChat(id: string | undefined): Promise<ChatRecord> {
+  const chat = await chatRepository.findById(parseChatId(id));
   if (!chat) {
     throw createError({ statusCode: 404, statusMessage: "Chat not found." });
   }
   return chat;
 }
 
-export async function createChatForUser(
+export async function createChat(
   userId: string,
   input: unknown,
 ): Promise<ChatRecord> {
@@ -40,11 +37,10 @@ export async function createChatForUser(
       statusMessage: parsed.error.issues[0]?.message ?? "Invalid chat.",
     });
   }
-  return chatRepository.createForUser(userId, parsed.data.title);
+  return chatRepository.create(userId, parsed.data.title);
 }
 
-export async function updateChatForUser(
-  userId: string,
+export async function updateChat(
   id: string | undefined,
   input: unknown,
 ): Promise<ChatRecord> {
@@ -56,9 +52,8 @@ export async function updateChatForUser(
     });
   }
 
-  const chat = await chatRepository.updateForUser(
+  const chat = await chatRepository.update(
     parseChatId(id),
-    userId,
     parsed.data as ChatPatch,
   );
   if (!chat) {
@@ -67,11 +62,8 @@ export async function updateChatForUser(
   return chat;
 }
 
-export async function deleteChatForUser(
-  userId: string,
-  id: string | undefined,
-): Promise<void> {
-  const deleted = await chatRepository.deleteForUser(parseChatId(id), userId);
+export async function deleteChat(id: string | undefined): Promise<void> {
+  const deleted = await chatRepository.deleteById(parseChatId(id));
   if (!deleted) {
     throw createError({ statusCode: 404, statusMessage: "Chat not found." });
   }
