@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { HouseIcon } from "lucide-vue-next";
+
 const props = defineProps<{
   path: string;
 }>();
@@ -27,11 +29,14 @@ const segments = computed(() => {
       <span v-if="index > 0" class="separator" aria-hidden="true">/</span>
       <button
         class="crumb"
+        :class="{ 'crumb-root': index === 0 }"
         type="button"
+        :aria-label="index === 0 ? 'Root' : undefined"
         :aria-current="index === segments.length - 1 ? 'page' : undefined"
         @click="emit('navigate', segment.path)"
       >
-        {{ segment.label }}
+        <HouseIcon v-if="index === 0" class="crumb-icon" aria-hidden="true" />
+        <template v-else>{{ segment.label }}</template>
       </button>
     </template>
   </nav>
@@ -66,6 +71,17 @@ const segments = computed(() => {
   transition:
     background-color 150ms ease-out,
     color 150ms ease-out;
+}
+
+.crumb-root {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 5px;
+}
+
+.crumb-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .crumb:hover,
