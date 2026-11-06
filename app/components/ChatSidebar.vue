@@ -5,6 +5,7 @@ import {
   MessageSquareIcon,
   PanelLeftCloseIcon,
   PlusIcon,
+  TagIcon,
   Trash2Icon,
 } from "lucide-vue-next";
 import type { ChatRecord } from "~~/shared/types/chat";
@@ -15,7 +16,7 @@ const props = withDefaults(
     activeChatId: string | null;
     collapsed: boolean;
     showToggle?: boolean;
-    activeView?: "chat" | "files";
+    activeView?: "chat" | "files" | "brands";
     user?: {
       name: string;
       email: string;
@@ -81,6 +82,14 @@ const initials = computed(() => {
       >
         <FolderIcon class="icon" />
         Files
+      </NuxtLink>
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'brands' }"
+        to="/app?view=brands"
+      >
+        <TagIcon class="icon" />
+        Brands
       </NuxtLink>
     </nav>
 
@@ -275,21 +284,55 @@ const initials = computed(() => {
   gap: 8px;
   margin: 4px 8px 8px;
   padding: 0 8px;
-  border: 0;
+  border: 1px solid rgb(255 255 255 / 0.5);
   border-radius: 6px;
-  background: transparent;
-  color: var(--muted-foreground);
+  background: linear-gradient(
+    180deg,
+    #f6f7f9 0%,
+    #dcdee3 42%,
+    #b9bcc4 52%,
+    #e4e6ea 100%
+  );
+  color: #1b1c1f;
   font-size: 14px;
+  font-weight: 500;
   text-align: left;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7) inset,
+    0 -1px 0 rgb(0 0 0 / 0.12) inset,
+    0 6px 18px rgb(214 220 232 / 0.16),
+    0 0 22px rgb(206 214 230 / 0.12);
   transition:
-    background-color 150ms ease-out,
-    color 150ms ease-out;
+    box-shadow 180ms ease-out,
+    filter 150ms ease-out,
+    transform 150ms ease-out;
 }
 
 .new-session:hover,
 .new-session.active {
-  background: color-mix(in oklab, var(--muted) 50%, transparent);
-  color: var(--foreground);
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #e6e8ec 42%,
+    #c3c6ce 52%,
+    #f1f3f6 100%
+  );
+  color: #111214;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.85) inset,
+    0 -1px 0 rgb(0 0 0 / 0.14) inset,
+    0 8px 24px rgb(214 220 232 / 0.24),
+    0 0 30px rgb(206 214 230 / 0.2);
+}
+
+.new-session:active {
+  transform: translateY(1px);
+  filter: brightness(0.97);
+}
+
+.new-session:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 0.65);
+  outline-offset: 2px;
 }
 
 .history {
