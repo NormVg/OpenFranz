@@ -6,7 +6,14 @@ export default defineNuxtConfig({
   css: ['markstream-vue/index.css', '~/assets/css/main.css'],
   vite: {
     optimizeDeps: {
-      include: ['eve/vue', 'lucide-vue-next', 'markstream-vue', 'markstream-vue/utils']
+      include: [
+        'better-auth/vue',
+        'eve/vue',
+        'lucide-vue-next',
+        'markstream-vue',
+        'markstream-vue/utils',
+        'zod'
+      ]
     }
   }
 })

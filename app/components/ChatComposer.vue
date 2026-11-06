@@ -61,7 +61,6 @@ onMounted(() => {
       @keydown="onKeydown"
     />
     <div class="composer-footer">
-      <span class="composer-hint">Enter to send · Shift + Enter for a new line</span>
       <div class="composer-actions">
         <button
           v-if="busy"
@@ -133,19 +132,9 @@ onMounted(() => {
   display: flex;
   min-height: 36px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   padding: 4px 12px 8px;
-}
-
-.composer-hint {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--muted-foreground);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .composer-actions {

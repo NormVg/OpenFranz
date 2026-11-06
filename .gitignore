@@ -20,6 +20,9 @@ node_modules
 logs
 *.log
 
+# TypeScript build metadata
+*.tsbuildinfo
+
 # Misc
 .DS_Store
 .fleet

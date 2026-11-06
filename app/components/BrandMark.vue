@@ -1,16 +1,11 @@
 <template>
   <svg
     class="brand-mark"
-    viewBox="0 0 32 32"
+    viewBox="0 0 96 64"
     fill="none"
     aria-hidden="true"
   >
-    <g transform="rotate(-90 16 16)">
-      <path
-        d="M9 4H23V28L16 22.5L9 28Z"
-        fill="currentColor"
-      />
-    </g>
+    <path d="M0 0H96L74 32L96 64H0Z" fill="currentColor" />
   </svg>
 </template>
 

@@ -2,7 +2,7 @@
 import type { ClientSessionState, SessionStreamEvent } from "eve/client";
 import { activeTurn } from "eve/events";
 import { useStickToBottom } from "markstream-vue/utils";
-import { createTitle } from "~/composables/useChatHistory";
+import { createTitle } from "~~/shared/utils/chat";
 import { useChatStore } from "~/stores/chat";
 
 const props = defineProps<{
@@ -51,10 +51,14 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function persist() {
   if (!localChatId.value) return;
 
-  chatStore.persistSnapshot(localChatId.value, {
-    session: session.value,
-    events: [...events.value],
-  });
+  void chatStore
+    .persistSnapshot(localChatId.value, {
+      session: session.value,
+      events: [...events.value],
+    })
+    .catch(() => {
+      chatStore.setError("Unable to save this chat. Please try again.");
+    });
 }
 
 function schedulePersist() {
@@ -68,8 +72,13 @@ async function submit() {
   if (!text || !canSend.value) return;
 
   if (!localChatId.value) {
-    const chat = chatStore.addChat(createTitle(text));
-    localChatId.value = chat.id;
+    try {
+      const chat = await chatStore.addChat(createTitle(text));
+      localChatId.value = chat.id;
+    } catch {
+      chatStore.setError("Unable to create this chat. Please try again.");
+      return;
+    }
   }
 
   draft.value = "";
@@ -188,7 +197,7 @@ onBeforeUnmount(() => {
 .home-mark {
   display: block;
   width: 64px;
-  height: 64px;
+  height: 43px;
   align-self: center;
   color: var(--foreground);
 }

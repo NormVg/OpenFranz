@@ -6,14 +6,20 @@ import {
   SunIcon,
   Trash2Icon,
 } from "lucide-vue-next";
-import type { ChatRecord } from "~/composables/useChatHistory";
+import type { ChatRecord } from "~~/shared/types/chat";
 
-defineProps<{
-  chats: ChatRecord[];
-  activeChatId: string | null;
-  collapsed: boolean;
-  theme: "light" | "dark";
-}>();
+withDefaults(
+  defineProps<{
+    chats: ChatRecord[];
+    activeChatId: string | null;
+    collapsed: boolean;
+    theme: "light" | "dark";
+    showToggle?: boolean;
+  }>(),
+  {
+    showToggle: true,
+  },
+);
 
 const emit = defineEmits<{
   (event: "new-chat"): void;
@@ -32,6 +38,7 @@ const emit = defineEmits<{
         <span class="brand-name">OpenFranz</span>
       </button>
       <button
+        v-if="showToggle"
         class="icon-button"
         type="button"
         aria-label="Close sidebar"
@@ -111,10 +118,12 @@ const emit = defineEmits<{
 
 .sidebar-header {
   display: flex;
+  height: 56px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 8px 4px;
+  padding: 0 8px;
 }
 
 .brand {
@@ -138,7 +147,7 @@ const emit = defineEmits<{
 .mark {
   display: block;
   width: 22px;
-  height: 22px;
+  height: 15px;
   flex-shrink: 0;
   color: var(--foreground);
 }

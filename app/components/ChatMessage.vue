@@ -13,7 +13,7 @@ const isUser = computed(() => props.message.role === "user");
 <template>
   <article class="message" :data-role="message.role">
     <div :class="isUser ? 'user-bubble' : 'assistant-body'">
-      <template v-for="(part, index) in message.parts" :key="part.id ?? index">
+      <template v-for="(part, index) in message.parts" :key="index">
         <MarkdownRender
           v-if="part.type === 'text' && !isUser"
           class="markdown"

@@ -1,75 +1,76 @@
-# Nuxt Minimal Starter
+# OpenFranz
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+OpenFranz is a Nuxt 4 chat workspace with a Google-only Better Auth sign-in, a small landing page, and per-user chat history stored in Neon through Drizzle ORM.
+
+## Requirements
+
+- Node.js 22.21+, 24.11+, or 26+
+- pnpm
+- A Neon PostgreSQL database
+- A Google OAuth web client
 
 ## Setup
 
-Make sure to install dependencies:
-
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
+cp .env.example .env
 ```
 
-## Development Server
+Fill in `.env` locally. Never commit it.
 
-Start the development server on `http://localhost:3000`:
+Required variables:
+
+```dotenv
+DATABASE_URL=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3000
+OLLAMA_API_KEY=
+OLLAMA_BASE_URL=https://ollama.com
+```
+
+Add this authorized redirect URI to the Google OAuth client:
+
+```text
+http://localhost:3000/api/auth/callback/google
+```
+
+## Database
+
+Generate migrations after changing the schema:
 
 ```bash
-# npm
-npm run dev
+pnpm db:generate
+```
 
-# pnpm
+Apply migrations to the configured Neon database:
+
+```bash
+pnpm db:migrate
+```
+
+Check connectivity:
+
+```bash
+pnpm db:check
+```
+
+## Development
+
+```bash
 pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+Routes:
 
-Build the application for production:
+- `/` - landing page with Google sign-in
+- `/app` - authenticated chat workspace
+
+## Verification
 
 ```bash
-# npm
-npm run build
-
-# pnpm
+pnpm test
+pnpm exec nuxt typecheck
 pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.

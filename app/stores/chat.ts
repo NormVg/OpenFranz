@@ -1,39 +1,67 @@
 import { defineStore } from "pinia";
 import type { ClientSessionState, SessionStreamEvent } from "eve/client";
-import {
-  createChat,
-  deleteChat,
-  getActiveChatId,
-  getChat,
-  listChats,
-  saveChat,
-  setActiveChatId,
-  type ChatRecord,
-} from "~/composables/useChatHistory";
+import type { ChatPatch, ChatRecord } from "~~/shared/types/chat";
+import { chatService } from "~/services/chat.service";
+
+const ACTIVE_CHAT_KEY = "openfranz:active-chat";
+
+function readActiveChatId(): string | null {
+  if (!import.meta.client) return null;
+  return window.localStorage.getItem(ACTIVE_CHAT_KEY);
+}
+
+function writeActiveChatId(id: string | null) {
+  if (!import.meta.client) return;
+
+  if (id) {
+    window.localStorage.setItem(ACTIVE_CHAT_KEY, id);
+  } else {
+    window.localStorage.removeItem(ACTIVE_CHAT_KEY);
+  }
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "Unable to load chats. Please try again.";
+}
 
 export const useChatStore = defineStore("chat", () => {
-  const chats = ref<ChatRecord[]>([]);
+  const chats = shallowRef<ChatRecord[]>([]);
   const activeChatId = ref<string | null>(null);
-  const initialSession = ref<ClientSessionState | undefined>();
-  const initialEvents = ref<SessionStreamEvent[]>([]);
+  const initialSession = shallowRef<ClientSessionState | undefined>();
+  const initialEvents = shallowRef<SessionStreamEvent[]>([]);
   const viewKey = ref(0);
   const hydrated = ref(false);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
 
-  function hydrate() {
+  async function hydrate() {
     if (hydrated.value) return;
 
-    chats.value = listChats();
-    const savedId = getActiveChatId();
-    const saved = savedId ? getChat(savedId) : null;
+    loading.value = true;
+    error.value = null;
 
-    if (saved) {
-      activeChatId.value = saved.id;
-      initialSession.value = saved.session;
-      initialEvents.value = saved.events;
-      viewKey.value += 1;
+    try {
+      chats.value = await chatService.list();
+      const savedId = readActiveChatId();
+      const saved =
+        chats.value.find((chat) => chat.id === savedId) ?? chats.value[0];
+
+      if (saved) {
+        activeChatId.value = saved.id;
+        initialSession.value = saved.session;
+        initialEvents.value = saved.events;
+        viewKey.value += 1;
+        writeActiveChatId(saved.id);
+      }
+
+      hydrated.value = true;
+    } catch (cause) {
+      error.value = errorMessage(cause);
+      throw cause;
+    } finally {
+      loading.value = false;
     }
-
-    hydrated.value = true;
   }
 
   function newChat() {
@@ -41,46 +69,47 @@ export const useChatStore = defineStore("chat", () => {
     initialSession.value = undefined;
     initialEvents.value = [];
     viewKey.value += 1;
-    setActiveChatId(null);
+    writeActiveChatId(null);
   }
 
-  function selectChat(id: string) {
-    const chat = getChat(id);
-    if (!chat) return;
+  async function selectChat(id: string) {
+    const chat = await chatService.get(id);
 
     activeChatId.value = chat.id;
     initialSession.value = chat.session;
     initialEvents.value = chat.events;
     viewKey.value += 1;
-    setActiveChatId(chat.id);
+    writeActiveChatId(chat.id);
   }
 
-  function addChat(title: string) {
-    const chat = createChat(title);
-    chats.value = listChats();
+  async function addChat(title: string) {
+    const chat = await chatService.create(title);
+    chats.value = [chat, ...chats.value];
     activeChatId.value = chat.id;
-    setActiveChatId(chat.id);
+    writeActiveChatId(chat.id);
     return chat;
   }
 
-  function removeChat(id: string) {
-    deleteChat(id);
-    chats.value = listChats();
+  async function removeChat(id: string) {
+    await chatService.remove(id);
+    chats.value = chats.value.filter((chat) => chat.id !== id);
 
     if (activeChatId.value === id) {
       newChat();
     }
   }
 
-  function persistSnapshot(
-    id: string,
-    patch: {
-      session?: ClientSessionState;
-      events?: SessionStreamEvent[];
-    },
-  ) {
-    saveChat(id, patch);
-    chats.value = listChats();
+  async function persistSnapshot(id: string, patch: ChatPatch) {
+    const chat = await chatService.update(id, patch);
+    const index = chats.value.findIndex((entry) => entry.id === id);
+
+    if (index !== -1) {
+      chats.value[index] = chat;
+    }
+  }
+
+  function setError(message: string | null) {
+    error.value = message;
   }
 
   return {
@@ -90,11 +119,14 @@ export const useChatStore = defineStore("chat", () => {
     initialEvents,
     viewKey,
     hydrated,
+    loading,
+    error,
     hydrate,
     newChat,
     selectChat,
     addChat,
     removeChat,
     persistSnapshot,
+    setError,
   };
 });

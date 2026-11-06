@@ -1,0 +1,212 @@
+<script setup lang="ts">
+import { useChatStore } from "~/stores/chat";
+
+const emit = defineEmits<{
+  (event: "sign-out"): void;
+}>();
+
+const chatStore = useChatStore();
+const theme = ref<"light" | "dark">("dark");
+const sidebarOpen = ref(true);
+const mobileSidebarOpen = ref(false);
+const agentStatus = ref<"idle" | "busy" | "resuming">("idle");
+
+useHead({
+  htmlAttrs: {
+    "data-theme": theme,
+  },
+});
+
+onMounted(async () => {
+  try {
+    await chatStore.hydrate();
+  } catch {
+    // The store exposes the user-facing error state.
+  }
+
+  const savedTheme = window.localStorage.getItem("openfranz:theme");
+  if (savedTheme === "light" || savedTheme === "dark") {
+    theme.value = savedTheme;
+  }
+
+  const savedSidebar = window.localStorage.getItem("openfranz:sidebar");
+  if (savedSidebar === "closed") {
+    sidebarOpen.value = false;
+  }
+});
+
+const activeTitle = computed(() => {
+  if (!chatStore.activeChatId) return "New chat";
+  return (
+    chatStore.chats.find((chat) => chat.id === chatStore.activeChatId)?.title ??
+    "New chat"
+  );
+});
+
+function toggleTheme() {
+  theme.value = theme.value === "dark" ? "light" : "dark";
+  window.localStorage.setItem("openfranz:theme", theme.value);
+}
+
+function toggleSidebar() {
+  sidebarOpen.value = !sidebarOpen.value;
+  window.localStorage.setItem(
+    "openfranz:sidebar",
+    sidebarOpen.value ? "open" : "closed",
+  );
+}
+
+function onToggleSidebar() {
+  if (window.matchMedia("(max-width: 767px)").matches) {
+    mobileSidebarOpen.value = true;
+    return;
+  }
+
+  toggleSidebar();
+}
+
+function startNewChat() {
+  chatStore.newChat();
+  mobileSidebarOpen.value = false;
+}
+
+async function selectChat(id: string) {
+  try {
+    await chatStore.selectChat(id);
+    mobileSidebarOpen.value = false;
+  } catch {
+    chatStore.setError("Unable to open that chat. Please try again.");
+  }
+}
+
+async function removeChat(id: string) {
+  try {
+    await chatStore.removeChat(id);
+  } catch {
+    chatStore.setError("Unable to delete that chat. Please try again.");
+  }
+}
+</script>
+
+<template>
+  <div class="app-shell">
+    <ChatSidebar
+      class="desktop-sidebar"
+      :chats="chatStore.chats"
+      :active-chat-id="chatStore.activeChatId"
+      :collapsed="!sidebarOpen"
+      :show-toggle="false"
+      :theme="theme"
+      @new-chat="startNewChat"
+      @select="selectChat"
+      @delete="removeChat"
+      @toggle-theme="toggleTheme"
+    />
+
+    <div
+      v-if="mobileSidebarOpen"
+      class="mobile-overlay"
+      @click="mobileSidebarOpen = false"
+    >
+      <div class="mobile-sidebar" @click.stop>
+        <ChatSidebar
+          :chats="chatStore.chats"
+          :active-chat-id="chatStore.activeChatId"
+          :collapsed="false"
+          :show-toggle="true"
+          :theme="theme"
+          @new-chat="startNewChat"
+          @select="selectChat"
+          @delete="removeChat"
+          @toggle="mobileSidebarOpen = false"
+          @toggle-theme="toggleTheme"
+        />
+      </div>
+    </div>
+
+    <div class="main">
+      <ChatTopbar
+        :title="activeTitle"
+        :theme="theme"
+        :agent-status="agentStatus"
+        @toggle-sidebar="onToggleSidebar"
+        @toggle-theme="toggleTheme"
+        @sign-out="emit('sign-out')"
+      />
+
+      <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
+
+      <div v-if="chatStore.loading" class="loading">Loading chats...</div>
+      <ChatSession
+        v-else
+        :key="chatStore.viewKey"
+        :chat-id="chatStore.activeChatId"
+        :initial-session="chatStore.initialSession"
+        :initial-events="chatStore.initialEvents"
+        :resume="Boolean(chatStore.initialSession)"
+        :is-dark="theme === 'dark'"
+        @status="agentStatus = $event"
+      />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.app-shell {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.desktop-sidebar {
+  display: flex;
+}
+
+.main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.error {
+  margin: 12px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklab, var(--destructive) 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--destructive) 12%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--destructive);
+}
+
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgb(0 0 0 / 0.5);
+}
+
+.mobile-sidebar {
+  width: 84vw;
+  max-width: 320px;
+  height: 100%;
+  background: var(--background);
+}
+
+@media (max-width: 767px) {
+  .desktop-sidebar {
+    display: none;
+  }
+}
+</style>
