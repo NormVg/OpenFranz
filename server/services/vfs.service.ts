@@ -1,3 +1,4 @@
+import { ServiceError } from "../utils/service-error";
 import {
   isAllowedRootDirectory,
   isVfsRoot,
@@ -23,15 +24,7 @@ import * as vfsRepository from "../repositories/vfs.repository";
 import * as vfsLinkRepository from "../repositories/vfs-link.repository";
 import type { VfsLink, VfsNode } from "../db/schema/vfs";
 
-export class VfsServiceError extends Error {
-  readonly statusCode: number;
-
-  constructor(statusCode: number, message: string) {
-    super(message);
-    this.name = "VfsServiceError";
-    this.statusCode = statusCode;
-  }
-}
+export class VfsServiceError extends ServiceError {}
 
 function toEntry(node: VfsNode): VfsEntry {
   return {

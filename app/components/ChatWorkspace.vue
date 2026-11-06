@@ -44,9 +44,11 @@ onMounted(async () => {
   }
 });
 
-const activeView = computed<"chat" | "files">(() =>
-  route.query.view === "files" ? "files" : "chat",
-);
+const activeView = computed<"chat" | "files" | "brands">(() => {
+  if (route.query.view === "files") return "files";
+  if (route.query.view === "brands") return "brands";
+  return "chat";
+});
 
 const activeTitle = computed(() => {
   if (!chatStore.activeChatId) return "New chat";
@@ -56,9 +58,11 @@ const activeTitle = computed(() => {
   );
 });
 
-const topbarTitle = computed(() =>
-  activeView.value === "files" ? "Files" : activeTitle.value,
-);
+const topbarTitle = computed(() => {
+  if (activeView.value === "files") return "Files";
+  if (activeView.value === "brands") return "Brands";
+  return activeTitle.value;
+});
 
 function toggleTheme() {
   theme.value = theme.value === "dark" ? "light" : "dark";
@@ -86,7 +90,7 @@ async function startNewChat() {
   chatStore.newChat();
   mobileSidebarOpen.value = false;
 
-  if (activeView.value === "files") {
+  if (activeView.value !== "chat") {
     await navigateTo("/app");
   }
 }
@@ -96,7 +100,7 @@ async function selectChat(id: string) {
     await chatStore.selectChat(id);
     mobileSidebarOpen.value = false;
 
-    if (activeView.value === "files") {
+    if (activeView.value !== "chat") {
       await navigateTo("/app");
     }
   } catch {
@@ -161,6 +165,7 @@ async function removeChat(id: string) {
       />
 
       <VfsExplorer v-if="activeView === 'files'" />
+      <BrandsExplorer v-else-if="activeView === 'brands'" />
       <template v-else>
         <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
 

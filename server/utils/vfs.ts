@@ -1,5 +1,6 @@
 import { createError, type H3Event } from "h3";
-import { VfsServiceError, vfs } from "../services/vfs.service";
+import { ServiceError } from "./service-error";
+import { vfs } from "../services/vfs.service";
 
 export { vfs };
 
@@ -10,7 +11,7 @@ export function defineVfsHandler<T>(
     try {
       return await handler(event);
     } catch (error) {
-      if (error instanceof VfsServiceError) {
+      if (error instanceof ServiceError) {
         throw createError({
           statusCode: error.statusCode,
           statusMessage: error.message,

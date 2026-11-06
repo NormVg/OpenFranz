@@ -36,3 +36,10 @@ sees the same files; there is no per-user isolation.
 - Use `web_search` to find current information, then `web_fetch` to read a page in full.
 - Cite the URLs you used when an answer depends on them.
 - Prefer primary sources over aggregators.
+
+## Brands
+
+- `brand_list` returns the brands in the shared workspace, with summaries and product names.
+- `brand_read` returns a brand's full product information: audience, tone, products, features, pricing, and notes.
+- `brand_write` creates or updates a brand. Only use it when the user explicitly asks to save or change brand information.
+- When the user mentions a brand or product by name, look it up before answering so the copy matches the stored product facts.
