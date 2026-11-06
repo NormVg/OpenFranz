@@ -6,7 +6,7 @@ useHead({
   meta: [
     {
       name: "description",
-      content: "A self-learning content agent for modern content.",
+      content: "A self-learning content agent that grows with modern content.",
     },
   ],
 });
@@ -40,7 +40,7 @@ async function signInWithGoogle() {
 
       <div class="copy">
         <h1 id="landing-title">OpenFranz</h1>
-        <p>A self-learning content agent for modern content.</p>
+        <p>A self-learning content agent that grows with modern content.</p>
       </div>
 
       <NuxtLink v-if="session" class="action" to="/app">
