@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { EveMessage } from "eve/client";
+import type { EveMessage, EveMessagePart } from "eve/client";
+import { CheckIcon, ChevronDownIcon, CopyIcon } from "lucide-vue-next";
 import { MarkdownRender } from "markstream-vue";
 
 const props = defineProps<{
@@ -8,12 +9,111 @@ const props = defineProps<{
 }>();
 
 const isUser = computed(() => props.message.role === "user");
+
+function isPartStreaming(part: EveMessagePart): boolean {
+  return "state" in part && part.state === "streaming";
+}
+
+const reasoningText = computed(() =>
+  props.message.parts
+    .filter((part) => part.type === "reasoning")
+    .map((part) => part.text)
+    .join("\n\n"),
+);
+
+const isReasoningStreaming = computed(() =>
+  props.message.parts.some(
+    (part) => part.type === "reasoning" && part.state === "streaming",
+  ),
+);
+
+const visibleParts = computed(() =>
+  props.message.parts.filter((part) => part.type !== "reasoning"),
+);
+
+const copyText = computed(() =>
+  props.message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n\n"),
+);
+
+const isStreaming = computed(() => props.message.parts.some(isPartStreaming));
+
+const reasoningOpen = ref(false);
+const copied = ref(false);
+const reasoningId = useId();
+
+let copyTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  isReasoningStreaming,
+  (streaming, wasStreaming) => {
+    if (streaming) {
+      reasoningOpen.value = true;
+      return;
+    }
+
+    if (wasStreaming) {
+      reasoningOpen.value = false;
+    }
+  },
+  { immediate: true },
+);
+
+async function copyResponse() {
+  if (!copyText.value) return;
+
+  try {
+    await navigator.clipboard.writeText(copyText.value);
+    copied.value = true;
+
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      copied.value = false;
+    }, 1600);
+  } catch {
+    copied.value = false;
+  }
+}
+
+onBeforeUnmount(() => {
+  if (copyTimer) clearTimeout(copyTimer);
+});
 </script>
 
 <template>
   <article class="message" :data-role="message.role">
     <div :class="isUser ? 'user-bubble' : 'assistant-body'">
-      <template v-for="(part, index) in message.parts" :key="index">
+      <div v-if="!isUser && reasoningText" class="reasoning-block">
+        <button
+          class="reasoning-toggle"
+          type="button"
+          :aria-expanded="reasoningOpen"
+          :aria-controls="reasoningId"
+          @click="reasoningOpen = !reasoningOpen"
+        >
+          <ChevronDownIcon
+            class="reasoning-chevron"
+            :class="{ open: reasoningOpen }"
+            aria-hidden="true"
+          />
+          <span class="reasoning-label">Reasoning</span>
+          <span v-if="isReasoningStreaming" class="reasoning-live">thinking</span>
+        </button>
+
+        <div
+          :id="reasoningId"
+          class="reasoning-body"
+          :class="{ open: reasoningOpen }"
+        >
+          <div class="reasoning-inner">
+            <p class="reasoning">{{ reasoningText }}</p>
+          </div>
+        </div>
+      </div>
+
+      <template v-for="(part, index) in visibleParts" :key="index">
         <MarkdownRender
           v-if="part.type === 'text' && !isUser"
           class="markdown"
@@ -26,9 +126,6 @@ const isUser = computed(() => props.message.role === "user");
           :is-dark="isDark"
         />
         <p v-else-if="part.type === 'text'" class="user-text">{{ part.text }}</p>
-        <p v-else-if="part.type === 'reasoning'" class="reasoning">
-          {{ part.text }}
-        </p>
         <span v-else-if="part.type === 'tool'" class="chip">
           {{ part.label }}
         </span>
@@ -44,6 +141,19 @@ const isUser = computed(() => props.message.role === "user");
           </span>
         </template>
       </template>
+
+      <div v-if="!isUser && copyText && !isStreaming" class="message-actions">
+        <button
+          class="action"
+          type="button"
+          :aria-label="copied ? 'Copied' : 'Copy response'"
+          @click="copyResponse"
+        >
+          <CheckIcon v-if="copied" class="action-icon" aria-hidden="true" />
+          <CopyIcon v-else class="action-icon" aria-hidden="true" />
+          <span>{{ copied ? "Copied" : "Copy" }}</span>
+        </button>
+      </div>
     </div>
   </article>
 </template>
@@ -113,12 +223,129 @@ const isUser = computed(() => props.message.role === "user");
   font-size: 0.92em;
 }
 
+.reasoning-block {
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--muted) 26%, transparent);
+}
+
+.reasoning-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.reasoning-toggle:hover {
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  color: var(--foreground);
+}
+
+.reasoning-toggle:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 45%, transparent);
+  outline-offset: -2px;
+}
+
+.reasoning-chevron {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reasoning-chevron.open {
+  transform: rotate(180deg);
+}
+
+.reasoning-label {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.reasoning-live {
+  margin-left: auto;
+  font-size: 11px;
+  color: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+  animation: reasoning-pulse 1.6s ease-in-out infinite;
+}
+
+.reasoning-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reasoning-body.open {
+  grid-template-rows: 1fr;
+}
+
+.reasoning-inner {
+  overflow: hidden;
+}
+
 .reasoning {
-  margin-bottom: 8px;
-  font-size: 13px;
-  line-height: 1.5;
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
   color: var(--muted-foreground);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11.5px;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.action:hover {
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  color: var(--foreground);
+  opacity: 1;
+}
+
+.action:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.action-icon {
+  width: 13px;
+  height: 13px;
 }
 
 .attachment-image {
@@ -142,5 +369,29 @@ const isUser = computed(() => props.message.role === "user");
   font-size: 12px;
   line-height: 1.4;
   color: var(--muted-foreground);
+}
+
+@keyframes reasoning-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reasoning-body,
+  .reasoning-chevron,
+  .reasoning-toggle,
+  .action {
+    transition: none;
+  }
+
+  .reasoning-live {
+    animation: none;
+  }
 }
 </style>
