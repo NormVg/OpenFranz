@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {
+  FolderIcon,
   LogOutIcon,
+  MessageSquareIcon,
   PanelLeftCloseIcon,
   PlusIcon,
   Trash2Icon,
@@ -13,6 +15,7 @@ const props = withDefaults(
     activeChatId: string | null;
     collapsed: boolean;
     showToggle?: boolean;
+    activeView?: "chat" | "files";
     user?: {
       name: string;
       email: string;
@@ -21,6 +24,7 @@ const props = withDefaults(
   }>(),
   {
     showToggle: true,
+    activeView: "chat",
     user: null,
   },
 );
@@ -61,9 +65,28 @@ const initials = computed(() => {
       </button>
     </div>
 
+    <nav class="view-nav" aria-label="Workspace views">
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'chat' }"
+        to="/app"
+      >
+        <MessageSquareIcon class="icon" />
+        Chat
+      </NuxtLink>
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'files' }"
+        to="/app?view=files"
+      >
+        <FolderIcon class="icon" />
+        Files
+      </NuxtLink>
+    </nav>
+
     <button
       class="new-session"
-      :class="{ active: activeChatId === null }"
+      :class="{ active: activeChatId === null && activeView === 'chat' }"
       type="button"
       @click="emit('new-chat')"
     >
@@ -215,6 +238,34 @@ const initials = computed(() => {
 .icon {
   width: 16px;
   height: 16px;
+}
+
+.view-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 0;
+}
+
+.view-link {
+  display: flex;
+  height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  text-decoration: none;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.view-link:hover,
+.view-link.active {
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  color: var(--foreground);
 }
 
 .new-session {

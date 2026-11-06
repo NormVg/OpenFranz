@@ -13,6 +13,7 @@ const emit = defineEmits<{
   (event: "sign-out"): void;
 }>();
 
+const route = useRoute();
 const chatStore = useChatStore();
 const theme = ref<"light" | "dark">("dark");
 const sidebarOpen = ref(true);
@@ -43,6 +44,10 @@ onMounted(async () => {
   }
 });
 
+const activeView = computed<"chat" | "files">(() =>
+  route.query.view === "files" ? "files" : "chat",
+);
+
 const activeTitle = computed(() => {
   if (!chatStore.activeChatId) return "New chat";
   return (
@@ -50,6 +55,10 @@ const activeTitle = computed(() => {
     "New chat"
   );
 });
+
+const topbarTitle = computed(() =>
+  activeView.value === "files" ? "Files" : activeTitle.value,
+);
 
 function toggleTheme() {
   theme.value = theme.value === "dark" ? "light" : "dark";
@@ -73,15 +82,23 @@ function onToggleSidebar() {
   toggleSidebar();
 }
 
-function startNewChat() {
+async function startNewChat() {
   chatStore.newChat();
   mobileSidebarOpen.value = false;
+
+  if (activeView.value === "files") {
+    await navigateTo("/app");
+  }
 }
 
 async function selectChat(id: string) {
   try {
     await chatStore.selectChat(id);
     mobileSidebarOpen.value = false;
+
+    if (activeView.value === "files") {
+      await navigateTo("/app");
+    }
   } catch {
     chatStore.setError("Unable to open that chat. Please try again.");
   }
@@ -104,6 +121,7 @@ async function removeChat(id: string) {
       :active-chat-id="chatStore.activeChatId"
       :collapsed="!sidebarOpen"
       :show-toggle="false"
+      :active-view="activeView"
       :user="props.user"
       @new-chat="startNewChat"
       @select="selectChat"
@@ -122,6 +140,7 @@ async function removeChat(id: string) {
           :active-chat-id="chatStore.activeChatId"
           :collapsed="false"
           :show-toggle="true"
+          :active-view="activeView"
           :user="props.user"
           @new-chat="startNewChat"
           @select="selectChat"
@@ -134,26 +153,29 @@ async function removeChat(id: string) {
 
     <div class="main">
       <ChatTopbar
-        :title="activeTitle"
+        :title="topbarTitle"
         :theme="theme"
         :agent-status="agentStatus"
         @toggle-sidebar="onToggleSidebar"
         @toggle-theme="toggleTheme"
       />
 
-      <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
+      <VfsExplorer v-if="activeView === 'files'" />
+      <template v-else>
+        <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
 
-      <div v-if="chatStore.loading" class="loading">Loading chats...</div>
-      <ChatSession
-        v-else
-        :key="chatStore.viewKey"
-        :chat-id="chatStore.activeChatId"
-        :initial-session="chatStore.initialSession"
-        :initial-events="chatStore.initialEvents"
-        :resume="Boolean(chatStore.initialSession)"
-        :is-dark="theme === 'dark'"
-        @status="agentStatus = $event"
-      />
+        <div v-if="chatStore.loading" class="loading">Loading chats...</div>
+        <ChatSession
+          v-else
+          :key="chatStore.viewKey"
+          :chat-id="chatStore.activeChatId"
+          :initial-session="chatStore.initialSession"
+          :initial-events="chatStore.initialEvents"
+          :resume="Boolean(chatStore.initialSession)"
+          :is-dark="theme === 'dark'"
+          @status="agentStatus = $event"
+        />
+      </template>
     </div>
   </div>
 </template>

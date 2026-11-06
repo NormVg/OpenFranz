@@ -6,15 +6,20 @@ const ollama = createOllama({
   baseURL: process.env.OLLAMA_BASE_URL,
 });
 
-const DEFAULT_OLLAMA_MODEL = "gemma4:31b-cloud";
+const DEFAULT_OLLAMA_MODEL = "gpt-oss:120b-cloud";
+const IMAGE_OLLAMA_MODEL = "gemma4:31b-cloud";
 const CONTEXT_WINDOW_TOKENS = 128_000;
 
 export default defineAgent({
   defaultTools: false,
   model: defineDynamic((ctx) => {
     const preferred = ctx.session.auth.initiator?.attributes?.preferredModel;
-    const modelId =
-      typeof preferred === "string" && preferred.length > 0
+    const hasImage = ctx.turn?.input.some(
+      (part) => part.kind === "file" && part.mediaType.startsWith("image/"),
+    );
+    const modelId = hasImage
+      ? IMAGE_OLLAMA_MODEL
+      : typeof preferred === "string" && preferred.length > 0
         ? preferred
         : DEFAULT_OLLAMA_MODEL;
 
@@ -32,6 +37,7 @@ export default defineAgent({
       "turn context:",
       JSON.stringify({
         modelId,
+        hasImage,
         principalId: auth?.principalId,
         principalType: auth?.principalType,
         wantsReasoning,

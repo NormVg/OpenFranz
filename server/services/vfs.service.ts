@@ -11,29 +11,14 @@ import {
   type VfsLinkKind,
 } from "../../shared/utils/vfs-links";
 import { rankVfsPaths } from "../../shared/utils/vfs-fuzzy";
+import type {
+  VfsEntry,
+  VfsGraph,
+  VfsLinkInfo,
+} from "../../shared/types/vfs";
 import * as vfsRepository from "../repositories/vfs.repository";
 import * as vfsLinkRepository from "../repositories/vfs-link.repository";
 import type { VfsLink, VfsNode } from "../db/schema/vfs";
-
-export interface VfsEntry {
-  path: string;
-  name: string;
-  type: "file" | "directory";
-  size: number;
-  updatedAt: string;
-  meta: Record<string, unknown>;
-}
-
-export interface VfsLinkInfo {
-  sourcePath: string;
-  targetPath: string;
-  kind: string;
-}
-
-export interface VfsGraph {
-  nodes: VfsEntry[];
-  edges: VfsLinkInfo[];
-}
 
 function toEntry(node: VfsNode): VfsEntry {
   return {
