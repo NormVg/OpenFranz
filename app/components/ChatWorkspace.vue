@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { useChatStore } from "~/stores/chat";
 
+const props = defineProps<{
+  user?: {
+    name: string;
+    email: string;
+    image?: string | null;
+  } | null;
+}>();
+
 const emit = defineEmits<{
   (event: "sign-out"): void;
 }>();
@@ -96,11 +104,11 @@ async function removeChat(id: string) {
       :active-chat-id="chatStore.activeChatId"
       :collapsed="!sidebarOpen"
       :show-toggle="false"
-      :theme="theme"
+      :user="props.user"
       @new-chat="startNewChat"
       @select="selectChat"
       @delete="removeChat"
-      @toggle-theme="toggleTheme"
+      @sign-out="emit('sign-out')"
     />
 
     <div
@@ -114,12 +122,12 @@ async function removeChat(id: string) {
           :active-chat-id="chatStore.activeChatId"
           :collapsed="false"
           :show-toggle="true"
-          :theme="theme"
+          :user="props.user"
           @new-chat="startNewChat"
           @select="selectChat"
           @delete="removeChat"
           @toggle="mobileSidebarOpen = false"
-          @toggle-theme="toggleTheme"
+          @sign-out="emit('sign-out')"
         />
       </div>
     </div>
@@ -131,7 +139,6 @@ async function removeChat(id: string) {
         :agent-status="agentStatus"
         @toggle-sidebar="onToggleSidebar"
         @toggle-theme="toggleTheme"
-        @sign-out="emit('sign-out')"
       />
 
       <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>

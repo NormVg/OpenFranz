@@ -5,6 +5,8 @@ definePageMeta({
   middleware: "auth",
 });
 
+const { data: session } = await authClient.useSession(useFetch);
+
 async function signOut() {
   await authClient.signOut();
   await navigateTo("/");
@@ -12,5 +14,5 @@ async function signOut() {
 </script>
 
 <template>
-  <ChatWorkspace @sign-out="signOut" />
+  <ChatWorkspace :user="session?.user ?? null" @sign-out="signOut" />
 </template>

@@ -1,23 +1,27 @@
 <script setup lang="ts">
 import {
-  MoonIcon,
+  LogOutIcon,
   PanelLeftCloseIcon,
   PlusIcon,
-  SunIcon,
   Trash2Icon,
 } from "lucide-vue-next";
 import type { ChatRecord } from "~~/shared/types/chat";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     chats: ChatRecord[];
     activeChatId: string | null;
     collapsed: boolean;
-    theme: "light" | "dark";
     showToggle?: boolean;
+    user?: {
+      name: string;
+      email: string;
+      image?: string | null;
+    } | null;
   }>(),
   {
     showToggle: true,
+    user: null,
   },
 );
 
@@ -26,8 +30,17 @@ const emit = defineEmits<{
   (event: "select", id: string): void;
   (event: "delete", id: string): void;
   (event: "toggle"): void;
-  (event: "toggle-theme"): void;
+  (event: "sign-out"): void;
 }>();
+
+const initials = computed(() => {
+  const source = props.user?.name?.trim() || props.user?.email || "?";
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+});
 </script>
 
 <template>
@@ -84,12 +97,30 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div class="sidebar-footer">
-      <button class="theme-toggle" type="button" @click="emit('toggle-theme')">
-        <SunIcon v-if="theme === 'dark'" class="icon" />
-        <MoonIcon v-else class="icon" />
-        {{ theme === "dark" ? "Light mode" : "Dark mode" }}
-      </button>
+    <div v-if="user" class="sidebar-footer">
+      <div class="account">
+        <img
+          v-if="user.image"
+          class="avatar"
+          :src="user.image"
+          alt=""
+          referrerpolicy="no-referrer"
+        />
+        <span v-else class="avatar avatar-fallback">{{ initials }}</span>
+        <div class="account-copy">
+          <span class="account-name">{{ user.name }}</span>
+          <span class="account-email">{{ user.email }}</span>
+        </div>
+        <button
+          class="logout-button"
+          type="button"
+          aria-label="Sign out"
+          title="Sign out"
+          @click="emit('sign-out')"
+        >
+          <LogOutIcon class="icon" />
+        </button>
+      </div>
     </div>
   </aside>
 </template>
@@ -293,30 +324,83 @@ const emit = defineEmits<{
 .sidebar-footer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: 8px;
+  padding: 10px 8px 12px;
   border-top: 1px solid var(--border);
 }
 
-.theme-toggle {
+.account {
   display: flex;
-  height: 32px;
+  min-width: 0;
   align-items: center;
   gap: 8px;
-  padding: 0 8px;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.account-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.account-name,
+.account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.account-email {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.logout-button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--muted-foreground);
-  font-size: 13px;
-  text-align: left;
   transition:
     background-color 150ms ease-out,
     color 150ms ease-out;
 }
 
-.theme-toggle:hover {
-  background: color-mix(in oklab, var(--muted) 50%, transparent);
-  color: var(--foreground);
+.logout-button:hover {
+  background: color-mix(in oklab, var(--destructive) 12%, transparent);
+  color: var(--destructive);
 }
+
 </style>

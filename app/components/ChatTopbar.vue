@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LogOutIcon, MenuIcon, MoonIcon, SunIcon } from "lucide-vue-next";
+import { MenuIcon, MoonIcon, SunIcon } from "lucide-vue-next";
 
 defineProps<{
   title: string;
@@ -10,7 +10,6 @@ defineProps<{
 const emit = defineEmits<{
   (event: "toggle-sidebar"): void;
   (event: "toggle-theme"): void;
-  (event: "sign-out"): void;
 }>();
 </script>
 
@@ -41,14 +40,6 @@ const emit = defineEmits<{
       >
         <SunIcon v-if="theme === 'dark'" class="icon" />
         <MoonIcon v-else class="icon" />
-      </button>
-      <button
-        class="icon-button"
-        type="button"
-        aria-label="Sign out"
-        @click="emit('sign-out')"
-      >
-        <LogOutIcon class="icon" />
       </button>
     </div>
   </header>
