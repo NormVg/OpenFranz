@@ -1,4 +1,4 @@
-import { asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDatabase } from "../db/client";
 import {
   vfsNodes,
@@ -14,6 +14,19 @@ export async function findByPath(path: string): Promise<VfsNode | null> {
     .limit(1);
 
   return row ?? null;
+}
+
+export async function findByPaths(paths: string[]): Promise<VfsNode[]> {
+  if (paths.length === 0) return [];
+
+  return getDatabase()
+    .select()
+    .from(vfsNodes)
+    .where(inArray(vfsNodes.path, paths));
+}
+
+export async function listAllNodes(): Promise<VfsNode[]> {
+  return getDatabase().select().from(vfsNodes).orderBy(asc(vfsNodes.path));
 }
 
 export async function listChildren(parentPath: string): Promise<VfsNode[]> {
