@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { vfs } from "../../server/services/vfs.service";
-import { runTool } from "../lib/vfs-tool";
+import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:

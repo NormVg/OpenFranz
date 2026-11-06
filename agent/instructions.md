@@ -30,3 +30,9 @@ sees the same files; there is no per-user isolation.
   the graph.
 - Prefer editing an existing file over creating a near-duplicate. Search first.
 - Never delete or move a file unless the user asked for it.
+
+## Web research
+
+- Use `web_search` to find current information, then `web_fetch` to read a page in full.
+- Cite the URLs you used when an answer depends on them.
+- Prefer primary sources over aggregators.

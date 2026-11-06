@@ -10,7 +10,7 @@ export function toolFailure(error: unknown): ToolResult<never> {
   const message =
     error instanceof Error && error.message.length > 0
       ? error.message
-      : "The filesystem operation failed.";
+      : "The tool call failed.";
 
   return { ok: false, error: message };
 }
