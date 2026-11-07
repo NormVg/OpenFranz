@@ -1,18 +1,41 @@
 <script setup lang="ts">
 import { authClient } from "~/lib/auth-client";
 
+const description =
+  "A library-grounded content agent that remembers what works and writes what's next.";
+const requestUrl = useRequestURL();
+const canonicalUrl = `${requestUrl.origin}/`;
+const socialImageUrl = `${requestUrl.origin}/og.png`;
+
 useHead({
   htmlAttrs: {
     "data-theme": "dark",
   },
-  title: "OpenFranz — Self-learning content agent",
-  meta: [
-    {
-      name: "description",
-      content:
-        "A self-learning content agent that remembers what works and writes what's next.",
-    },
-  ],
+  link: [{ rel: "canonical", href: canonicalUrl }],
+});
+
+useSeoMeta({
+  title: "OpenFranz | Content agent",
+  description,
+  robots: "index, follow, max-image-preview:large",
+  themeColor: "#0d0d0c",
+  ogTitle: "OpenFranz | Content agent",
+  ogDescription: description,
+  ogType: "website",
+  ogUrl: canonicalUrl,
+  ogSiteName: "OpenFranz",
+  ogLocale: "en_US",
+  ogImage: socialImageUrl,
+  ogImageSecureUrl: socialImageUrl,
+  ogImageType: "image/png",
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  ogImageAlt: "OpenFranz logo and title on a dark dithered background",
+  twitterCard: "summary_large_image",
+  twitterTitle: "OpenFranz | Content agent",
+  twitterDescription: description,
+  twitterImage: socialImageUrl,
+  twitterImageAlt: "OpenFranz logo and title on a dark dithered background",
 });
 
 const { data: session } = await authClient.useSession(useFetch);
@@ -56,7 +79,7 @@ async function signInWithGoogle() {
       <div class="copy">
         <h1 id="landing-title">OpenFranz</h1>
         <p>
-          A self-learning content agent that remembers what works and writes
+          A library-grounded content agent that remembers what works and writes
           what's next.
         </p>
       </div>

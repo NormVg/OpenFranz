@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * UiDither — the paper-design dithering shader, vendored from
+ * UiDither: the paper-design dithering shader, vendored from
  * .context/Dithering.vue so the landing page and the empty chat state share
  * one living-texture primitive. Takes colors, shape, and dither type as props
  * and renders a full-container WebGL canvas.
