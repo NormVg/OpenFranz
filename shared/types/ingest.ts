@@ -1,4 +1,4 @@
-export type IngestFolder = "arsenal" | "tecniques";
+export type IngestFolder = "arsenal" | "knowledge";
 
 export type IngestTextInput = {
   kind: "text";

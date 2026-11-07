@@ -5,7 +5,7 @@ import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:
-    "List the entries in a directory of the knowledge filesystem. The root contains exactly two folders: /arsenal and /tecniques.",
+    "List the entries in a directory of the knowledge filesystem. The root contains exactly two folders: /arsenal and /knowledge.",
   inputSchema: z.object({
     path: z
       .string()

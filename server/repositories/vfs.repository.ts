@@ -1,4 +1,4 @@
-import { asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { getDatabase } from "../db/client";
 import {
   vfsNodes,
@@ -33,7 +33,12 @@ export async function listChildren(parentPath: string): Promise<VfsNode[]> {
   return getDatabase()
     .select()
     .from(vfsNodes)
-    .where(eq(vfsNodes.parentPath, parentPath))
+    .where(
+      and(
+        eq(vfsNodes.parentPath, parentPath),
+        ne(vfsNodes.path, parentPath),
+      ),
+    )
     .orderBy(asc(vfsNodes.type), asc(vfsNodes.name));
 }
 
@@ -41,7 +46,12 @@ export async function countChildren(parentPath: string): Promise<number> {
   const [row] = await getDatabase()
     .select({ count: sql<number>`count(*)::int` })
     .from(vfsNodes)
-    .where(eq(vfsNodes.parentPath, parentPath));
+    .where(
+      and(
+        eq(vfsNodes.parentPath, parentPath),
+        ne(vfsNodes.path, parentPath),
+      ),
+    );
 
   return row?.count ?? 0;
 }

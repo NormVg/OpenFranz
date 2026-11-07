@@ -129,7 +129,7 @@ async function submit() {
           <span>Folder</span>
           <select v-model="folder">
             <option value="arsenal">/arsenal</option>
-            <option value="tecniques">/tecniques</option>
+            <option value="knowledge">/knowledge</option>
           </select>
         </label>
 

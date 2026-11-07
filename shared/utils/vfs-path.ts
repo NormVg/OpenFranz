@@ -1,9 +1,9 @@
 const MAX_PATH_LENGTH = 1024;
 
-export const VFS_ROOT_DIRECTORIES = ["arsenal", "tecniques"] as const;
+export const VFS_ROOT_DIRECTORIES = ["arsenal", "knowledge"] as const;
 
 export const VFS_ROOT_POLICY_MESSAGE =
-  "Only the /arsenal and /tecniques folders are allowed at the root.";
+  "Only the /arsenal and /knowledge folders are allowed at the root.";
 
 export type VfsEntryType = "file" | "directory";
 

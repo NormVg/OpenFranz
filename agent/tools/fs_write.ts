@@ -5,7 +5,7 @@ import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:
-    "Create or overwrite a text file in the knowledge filesystem. Wiki links such as [[/arsenal/other.md]] and Markdown links are indexed automatically. Only /arsenal and /tecniques may exist at the root.",
+    "Create or overwrite a text file in the knowledge filesystem. Wiki links such as [[/arsenal/other.md]] and Markdown links are indexed automatically. Only /arsenal and /knowledge may exist at the root.",
   inputSchema: z.object({
     path: z
       .string()

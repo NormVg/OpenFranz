@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const INGEST_FOLDERS = ["arsenal", "tecniques"] as const;
+export const INGEST_FOLDERS = ["arsenal", "knowledge"] as const;
 
 export const ingestFolderSchema = z.enum(INGEST_FOLDERS);
 

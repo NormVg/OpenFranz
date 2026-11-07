@@ -5,7 +5,7 @@ import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:
-    "Create a directory in the knowledge filesystem. Only /arsenal and /tecniques may exist at the root.",
+    "Create a directory in the knowledge filesystem. Only /arsenal and /knowledge may exist at the root.",
   inputSchema: z.object({
     path: z
       .string()
