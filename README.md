@@ -1,11 +1,9 @@
 <p align="center">
-  <img src="public/og.png" width="720" alt="OpenFranz">
+  <img src="public/readme.svg" width="360" alt="OpenFranz">
 </p>
 
-<h1 align="center">OpenFranz</h1>
-
 <p align="center">
-  <strong>A script-writing agent that grows with your library and writes what's next.</strong>
+  <strong>A script-writing agent that learns from people's content.</strong>
 </p>
 
 <p align="center">
