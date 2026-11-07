@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowUpIcon,
+  BrainIcon,
   ImagePlusIcon,
   Loader2Icon,
   SearchIcon,
@@ -44,7 +45,12 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: "update:modelValue", value: string): void;
-  (event: "submit", files: File[], brand: BrandContext | null): void;
+  (
+    event: "submit",
+    files: File[],
+    brand: BrandContext | null,
+    deep: boolean,
+  ): void;
   (event: "stop"): void;
 }>();
 
@@ -58,6 +64,7 @@ const brandMenuOpen = ref(false);
 const brandQuery = ref("");
 const brandLoading = ref(false);
 const selectedBrand = ref<BrandRecord | null>(null);
+const deepMode = ref(false);
 
 const filteredBrands = computed(() => {
   const query = brandQuery.value.trim().toLowerCase();
@@ -148,9 +155,11 @@ function submit() {
     selectedBrand.value
       ? { slug: selectedBrand.value.slug, name: selectedBrand.value.name }
       : null,
+    deepMode.value,
   );
   clearAttachments();
   selectedBrand.value = null;
+  deepMode.value = false;
   attachmentError.value = null;
 }
 
@@ -249,6 +258,19 @@ onBeforeUnmount(clearAttachments);
       </button>
     </div>
 
+    <div v-if="deepMode" class="deep-chip">
+      <BrainIcon class="deep-chip-icon" aria-hidden="true" />
+      <span class="deep-chip-name">Deep mode</span>
+      <button
+        class="deep-chip-remove"
+        type="button"
+        aria-label="Turn off deep mode"
+        @click="deepMode = false"
+      >
+        <XIcon class="deep-chip-x" aria-hidden="true" />
+      </button>
+    </div>
+
     <label class="sr-only" for="chat-composer">Message the agent</label>
     <textarea
       id="chat-composer"
@@ -297,6 +319,18 @@ onBeforeUnmount(clearAttachments);
           @click="toggleBrandMenu"
         >
           <TagIcon class="icon" />
+        </button>
+        <button
+          class="icon-button attach"
+          :class="{ active: deepMode }"
+          type="button"
+          :disabled="disabled || busy"
+          :aria-pressed="deepMode"
+          aria-label="Deep mode"
+          title="Deep mode: ask questions before writing"
+          @click="deepMode = !deepMode"
+        >
+          <BrainIcon class="icon" />
         </button>
       </div>
 
@@ -485,6 +519,49 @@ onBeforeUnmount(clearAttachments);
   height: 10px;
 }
 
+.deep-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 10px 12px 0;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: 11px;
+  color: var(--foreground);
+}
+
+.deep-chip-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.deep-chip-name {
+  font-weight: 500;
+}
+
+.deep-chip-remove {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.deep-chip-remove:hover {
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.deep-chip-x {
+  width: 10px;
+  height: 10px;
+}
+
 .brand-backdrop {
   position: fixed;
   inset: 0;
@@ -645,6 +722,16 @@ onBeforeUnmount(clearAttachments);
 .icon-button.attach:hover:not(:disabled) {
   background: color-mix(in oklab, var(--muted) 65%, transparent);
   color: var(--foreground);
+}
+
+.icon-button.attach.active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.icon-button.attach.active:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 88%, transparent);
+  color: var(--background);
 }
 
 .icon-button.attach:disabled {

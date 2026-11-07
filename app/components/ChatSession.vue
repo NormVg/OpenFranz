@@ -13,6 +13,7 @@ import {
   withBrandContext,
   type BrandContext,
 } from "~~/shared/utils/brand-context";
+import { withDeepMode } from "~~/shared/utils/deep-mode";
 import { useChatStore } from "~/stores/chat";
 
 const props = defineProps<{
@@ -118,7 +119,11 @@ async function buildMessageContent(
   return parts;
 }
 
-async function submit(files: File[] = [], brand: BrandContext | null = null) {
+async function submit(
+  files: File[] = [],
+  brand: BrandContext | null = null,
+  deep = false,
+) {
   const text = draft.value.trim();
   if ((!text && files.length === 0) || isBusy.value || isResuming.value) return;
   if (isSubmitting.value) return;
@@ -142,7 +147,8 @@ async function submit(files: File[] = [], brand: BrandContext | null = null) {
       }
     }
 
-    const messageText = brand ? withBrandContext(text, brand) : text;
+    const branded = brand ? withBrandContext(text, brand) : text;
+    const messageText = deep ? withDeepMode(branded) : branded;
 
     let content: MessageContent;
     try {
