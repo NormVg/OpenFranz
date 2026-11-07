@@ -673,38 +673,44 @@ onBeforeUnmount(clearAttachments);
   display: inline-flex;
   height: 30px;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 0 11px;
-  border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent);
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--destructive) 14%, transparent);
-  color: var(--destructive);
-  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11px;
   font-weight: 500;
   line-height: 1;
   transition:
     background-color 150ms ease-out,
     border-color 150ms ease-out,
+    color 150ms ease-out,
     transform 150ms ease-out;
 }
 
 .stop-button:hover:not(:disabled) {
-  border-color: color-mix(in oklab, var(--destructive) 60%, transparent);
-  background: color-mix(in oklab, var(--destructive) 22%, transparent);
+  border-color: color-mix(in oklab, var(--foreground) 22%, transparent);
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  color: var(--foreground);
 }
 
 .stop-button:active:not(:disabled) {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .stop-button:disabled {
   cursor: progress;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .stop-button .icon {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
+}
+
+.stop-button .icon.fill {
+  fill: currentColor;
 }
 
 .icon {

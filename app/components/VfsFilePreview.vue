@@ -125,10 +125,7 @@ function formatDate(value: string): string {
 .preview-title p {
   margin-top: 3px;
   overflow: hidden;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
   text-overflow: ellipsis;
@@ -137,10 +134,7 @@ function formatDate(value: string): string {
 
 .preview-meta {
   flex-shrink: 0;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
 }
@@ -151,10 +145,7 @@ function formatDate(value: string): string {
   margin: 0;
   overflow: auto;
   padding: 20px;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 12px;
   line-height: 1.7;
   color: var(--foreground);
@@ -167,10 +158,7 @@ function formatDate(value: string): string {
   gap: 16px;
   padding: 10px 20px;
   border-top: 1px solid var(--border);
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
 }

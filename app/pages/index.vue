@@ -155,10 +155,7 @@ h1 {
 
 .error {
   margin-top: 18px;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
   line-height: 1.5;
   color: #e8b4b0;

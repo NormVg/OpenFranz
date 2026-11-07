@@ -238,10 +238,13 @@ async function removeChat(id: string) {
 }
 
 .mobile-sidebar {
-  width: 84vw;
-  max-width: 320px;
+  width: min(84vw, 320px);
   height: 100%;
   background: var(--background);
+}
+
+.mobile-sidebar :deep(.sidebar) {
+  width: 100%;
 }
 
 @media (max-width: 767px) {

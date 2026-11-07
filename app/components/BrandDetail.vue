@@ -104,10 +104,7 @@ const emit = defineEmits<{
 
 .slug {
   margin-top: 2px;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--muted-foreground);
 }

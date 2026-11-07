@@ -101,10 +101,7 @@ function formatSize(size: number): string {
 
 .file-meta {
   flex-shrink: 0;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
 }

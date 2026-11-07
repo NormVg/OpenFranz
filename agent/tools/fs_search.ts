@@ -5,7 +5,7 @@ import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:
-    "Fuzzy-search file and folder paths in the knowledge filesystem. Use it when you remember part of a name or path.",
+    "Fuzzy-search file and folder paths in the knowledge filesystem. Search before writing so you update an existing document instead of creating a near-duplicate.",
   inputSchema: z.object({
     query: z.string().describe("Part of a file name or path."),
     limit: z

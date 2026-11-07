@@ -174,10 +174,7 @@ onMounted(loadGraph);
 
 .graph-header p {
   margin-top: 2px;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
 }

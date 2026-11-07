@@ -255,10 +255,7 @@ onBeforeUnmount(() => {
 
 .searching {
   padding: 8px 12px 0;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
 }

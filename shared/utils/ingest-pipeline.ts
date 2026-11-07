@@ -84,6 +84,46 @@ export function selectFrameTimes(
   return unique;
 }
 
+const MIN_DOCUMENT_CHARS = 300;
+const MAX_DOCUMENT_CHARS = 6_000;
+
+/**
+ * The hard floor for an ingested document. The prompt sets the quality bar;
+ * this keeps a weak run from writing a thin, unsourced, or placeholder file.
+ */
+export function validateIngestDocument(
+  content: string,
+  sourceUrl: string,
+): string[] {
+  const problems: string[] = [];
+  const trimmed = content.trim();
+
+  if (trimmed.length < MIN_DOCUMENT_CHARS) {
+    problems.push(
+      "The document is too thin. Include concrete evidence from the source and a specific application.",
+    );
+  }
+  if (trimmed.length > MAX_DOCUMENT_CHARS) {
+    problems.push(
+      "The document is too long. Keep it under 6000 characters and one idea per document.",
+    );
+  }
+  if (!trimmed.startsWith("# ")) {
+    problems.push("The document must start with a level-1 Markdown heading.");
+  }
+  if (!trimmed.includes(sourceUrl)) {
+    problems.push(`The document must include the source URL: ${sourceUrl}`);
+  }
+  if (!/^##\s+/m.test(trimmed)) {
+    problems.push("The document must include at least one level-2 section.");
+  }
+  if (/\b(to be created|TBD|TODO|lorem ipsum)\b/i.test(trimmed)) {
+    problems.push("Remove placeholder text before writing.");
+  }
+
+  return problems;
+}
+
 export function isSafeIngestPath(path: string): boolean {
   try {
     const normalized = normalizeVfsPath(path);

@@ -410,10 +410,7 @@ onBeforeUnmount(stopPolling);
 .job-url {
   min-width: 0;
   overflow: hidden;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--foreground);
   text-overflow: ellipsis;
@@ -452,10 +449,7 @@ onBeforeUnmount(stopPolling);
 }
 
 .doc-path {
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--foreground);
   overflow-wrap: anywhere;

@@ -26,6 +26,7 @@ interface GraphTheme {
   foreground: string;
   muted: string;
   link: string;
+  font: string;
 }
 
 const props = defineProps<{
@@ -49,6 +50,7 @@ const theme: GraphTheme = {
   foreground: "#e5e5e5",
   muted: "#8a8a8a",
   link: "rgba(255,255,255,0.22)",
+  font: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
 };
 
 let graph: ForceGraph<GraphNode, GraphLink> | null = null;
@@ -137,6 +139,7 @@ function readTheme() {
   theme.background = read("--background", "#111111");
   theme.foreground = read("--foreground", "#e5e5e5");
   theme.muted = read("--muted-foreground", "#8a8a8a");
+  theme.font = read("--font-sans", "ui-sans-serif, system-ui, sans-serif");
 
   const isDark = document.documentElement.dataset.theme !== "light";
   theme.link = isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)";
@@ -234,7 +237,7 @@ function paintNode(
   }
 
   const fontSize = 9 / scale;
-  ctx.font = `${fontSize}px "SF Mono", "JetBrains Mono", monospace`;
+  ctx.font = `${fontSize}px ${theme.font}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.lineJoin = "round";
@@ -263,7 +266,7 @@ function paintPointerArea(
   ctx.fill();
 
   const fontSize = 9 / scale;
-  ctx.font = `${fontSize}px "SF Mono", "JetBrains Mono", monospace`;
+  ctx.font = `${fontSize}px ${theme.font}`;
   const width = ctx.measureText(node.label).width;
   ctx.fillRect(
     x - width / 2 - 2 / scale,
@@ -528,10 +531,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 12px;
   bottom: 12px;
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--muted-foreground);
   pointer-events: none;

@@ -4,6 +4,7 @@ import {
   frameTarget,
   isSafeIngestPath,
   selectFrameTimes,
+  validateIngestDocument,
 } from "../shared/utils/ingest-pipeline.ts";
 
 test("selects speech-timed frames across the whole reel", () => {
@@ -66,4 +67,46 @@ test("accepts only markdown documents under arsenal or knowledge", () => {
   assert.equal(isSafeIngestPath("/tecniques/hooks.md"), false);
   assert.equal(isSafeIngestPath("/arsenal/hooks.txt"), false);
   assert.equal(isSafeIngestPath("/etc/passwd"), false);
+});
+
+const sourceUrl = "https://www.instagram.com/p/abc/";
+
+const groundedDocument = `# Result First Hook
+
+Source: ${sourceUrl}
+
+## What the source shows
+
+- The creator opens on the finished result, then cuts back to the failed attempt.
+- The on-screen text reads "I tried this for 30 days".
+- The spoken line is "Here is what nobody tells you about the first attempt".
+
+## Apply it
+
+- Open on the finished result for the first second, then rewind to the failed attempt so the viewer has a reason to stay for the explanation.
+
+## Related
+
+- [Hook Alignment Framework](/arsenal/hooks-attention/Hook-Alignment-Framework.md)
+`;
+
+test("accepts a grounded document with a source and sections", () => {
+  assert.deepEqual(validateIngestDocument(groundedDocument, sourceUrl), []);
+});
+
+test("rejects thin, unsourced, and placeholder documents", () => {
+  const thin = `# Too short\n\nSource: ${sourceUrl}`;
+  assert.equal(validateIngestDocument(thin, sourceUrl).length > 0, true);
+
+  const wrongSource = groundedDocument.replace(sourceUrl, "https://example.com");
+  assert.equal(validateIngestDocument(wrongSource, sourceUrl).length > 0, true);
+
+  const noSections = `# Title\n\nSource: ${sourceUrl}\n\n${"A".repeat(320)}`;
+  assert.equal(validateIngestDocument(noSections, sourceUrl).length > 0, true);
+
+  const placeholder = `${groundedDocument}\n\nSee the Visual Awe Checklist (to be created).`;
+  assert.equal(validateIngestDocument(placeholder, sourceUrl).length > 0, true);
+
+  const tooLong = `${groundedDocument}\n\n${"A".repeat(6_000)}`;
+  assert.equal(validateIngestDocument(tooLong, sourceUrl).length > 0, true);
 });

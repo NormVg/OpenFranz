@@ -63,10 +63,7 @@ const segments = computed(() => {
   border-radius: 4px;
   background: transparent;
   color: var(--muted-foreground);
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
   transition:
     background-color 150ms ease-out,
@@ -92,10 +89,7 @@ const segments = computed(() => {
 
 .separator {
   color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
+  font-family: var(--font-sans);
   font-size: 11px;
 }
 </style>
