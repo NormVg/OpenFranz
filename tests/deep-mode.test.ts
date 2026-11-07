@@ -57,6 +57,7 @@ test("composes with the brand marker", () => {
   assert.deepEqual(parseBrandContext(deep.text), {
     slug: "acme-coffee",
     name: "Acme Coffee",
+    product: null,
     text: "Write a launch post.",
   });
 });

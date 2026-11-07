@@ -28,7 +28,11 @@ const userBrand = computed(() => {
   const parsed = parseBrandContext(parseDeepMode(text).text);
 
   if (!parsed.slug) return null;
-  return { slug: parsed.slug, name: parsed.name ?? parsed.slug };
+  return {
+    slug: parsed.slug,
+    name: parsed.name ?? parsed.slug,
+    product: parsed.product,
+  };
 });
 
 const userDeep = computed(() => {
@@ -129,6 +133,7 @@ onBeforeUnmount(() => {
         <div v-if="userBrand" class="user-brand">
           <TagIcon class="user-brand-icon" aria-hidden="true" />
           {{ userBrand.name }}
+          <template v-if="userBrand.product"> · {{ userBrand.product }}</template>
         </div>
       </div>
 
