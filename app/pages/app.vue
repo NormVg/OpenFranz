@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { authClient } from "~/lib/auth-client";
 
-definePageMeta({
-  middleware: "auth",
-});
-
 const { data: session } = await authClient.useSession(useFetch);
+
+if (!session.value) {
+  await navigateTo("/");
+}
 
 async function signOut() {
   await authClient.signOut();
