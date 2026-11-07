@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { MenuIcon, MoonIcon, SunIcon } from "lucide-vue-next";
+import {
+  MoonIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+  SunIcon,
+} from "lucide-vue-next";
 
 defineProps<{
   title: string;
   theme: "light" | "dark";
   agentStatus: "idle" | "busy" | "resuming";
+  sidebarOpen: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -19,10 +25,12 @@ const emit = defineEmits<{
       <button
         class="icon-button"
         type="button"
-        aria-label="Toggle sidebar"
+        :aria-label="sidebarOpen ? 'Close sidebar' : 'Open sidebar'"
+        :title="sidebarOpen ? 'Close sidebar' : 'Open sidebar'"
         @click="emit('toggle-sidebar')"
       >
-        <MenuIcon class="icon" />
+        <PanelLeftCloseIcon v-if="sidebarOpen" class="icon" />
+        <PanelLeftOpenIcon v-else class="icon" />
       </button>
       <span class="title">{{ title }}</span>
     </div>

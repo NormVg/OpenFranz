@@ -18,7 +18,14 @@ const chatStore = useChatStore();
 const theme = ref<"light" | "dark">("dark");
 const sidebarOpen = ref(true);
 const mobileSidebarOpen = ref(false);
+const isMobile = ref(false);
 const agentStatus = ref<"idle" | "busy" | "resuming">("idle");
+
+let mobileQuery: MediaQueryList | null = null;
+
+function syncMobile(event?: MediaQueryListEvent) {
+  isMobile.value = event ? event.matches : (mobileQuery?.matches ?? false);
+}
 
 useHead({
   htmlAttrs: {
@@ -27,6 +34,10 @@ useHead({
 });
 
 onMounted(async () => {
+  mobileQuery = window.matchMedia("(max-width: 767px)");
+  syncMobile();
+  mobileQuery.addEventListener("change", syncMobile);
+
   try {
     await chatStore.hydrate();
   } catch {
@@ -42,6 +53,11 @@ onMounted(async () => {
   if (savedSidebar === "closed") {
     sidebarOpen.value = false;
   }
+});
+
+onBeforeUnmount(() => {
+  mobileQuery?.removeEventListener("change", syncMobile);
+  mobileQuery = null;
 });
 
 const activeView = computed<"chat" | "files" | "brands" | "ingest">(() => {
@@ -80,7 +96,7 @@ function toggleSidebar() {
 }
 
 function onToggleSidebar() {
-  if (window.matchMedia("(max-width: 767px)").matches) {
+  if (isMobile.value) {
     mobileSidebarOpen.value = true;
     return;
   }
@@ -162,6 +178,7 @@ async function removeChat(id: string) {
         :title="topbarTitle"
         :theme="theme"
         :agent-status="agentStatus"
+        :sidebar-open="isMobile ? mobileSidebarOpen : sidebarOpen"
         @toggle-sidebar="onToggleSidebar"
         @toggle-theme="toggleTheme"
       />
