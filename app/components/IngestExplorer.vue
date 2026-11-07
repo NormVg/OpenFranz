@@ -9,7 +9,10 @@ const loading = ref(true);
 const submitting = ref(false);
 const error = ref<string | null>(null);
 
+const WAKE_INTERVAL_MS = 25_000;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let lastWakeAt = 0;
+let waking = false;
 
 const canSubmit = computed(
   () => url.value.trim().length > 0 && !submitting.value,
@@ -31,10 +34,34 @@ async function refresh() {
   try {
     jobs.value = await ingestJobService.list();
     error.value = null;
+    void wakeIfNeeded();
   } catch (cause) {
     error.value = errorMessage(cause);
   } finally {
     loading.value = false;
+  }
+}
+
+/**
+ * A sleeping Render instance can take close to a minute to boot. Keep nudging
+ * it every 25 seconds while a job is queued so the queue drains on its own.
+ */
+async function wakeIfNeeded() {
+  if (waking) return;
+
+  const hasQueued = jobs.value.some((job) => job.status === "queued");
+  if (!hasQueued) return;
+  if (Date.now() - lastWakeAt < WAKE_INTERVAL_MS) return;
+
+  lastWakeAt = Date.now();
+  waking = true;
+
+  try {
+    await ingestJobService.wake();
+  } catch {
+    // The next poll retries.
+  } finally {
+    waking = false;
   }
 }
 
@@ -48,6 +75,7 @@ async function submit() {
     const job = await ingestJobService.enqueueInstagram(url.value.trim());
     jobs.value = [job, ...jobs.value];
     url.value = "";
+    void wakeIfNeeded();
   } catch (cause) {
     error.value = errorMessage(cause);
   } finally {

@@ -23,6 +23,10 @@ export const ingestJobService = {
     return job;
   },
 
+  wake(): Promise<{ ok: boolean }> {
+    return $fetch<{ ok: boolean }>("/api/ingest/wake", { method: "POST" });
+  },
+
   get(id: string): Promise<IngestJobRecord> {
     return cachedResponse(`ingest:job:${id}`, JOB_TTL_MS, () =>
       $fetch<IngestJobRecord>(`/api/ingest/jobs/${id}`),
