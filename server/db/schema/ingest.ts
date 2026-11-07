@@ -1,4 +1,4 @@
-import type { IngestPipelineResult } from "~~/shared/types/ingest-pipeline";
+import type { IngestPipelineResult } from "../../../shared/types/ingest-pipeline";
 import {
   index,
   integer,

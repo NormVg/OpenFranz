@@ -1,4 +1,4 @@
-import type { BrandProduct } from "~~/shared/types/brand";
+import type { BrandProduct } from "../../../shared/types/brand";
 import {
   index,
   jsonb,

@@ -1,20 +1,16 @@
 services:
   - type: web
-    name: openfranz
+    name: openfranz-worker
     runtime: node
     plan: free
     region: singapore
     branch: master
-    buildCommand: pnpm install --frozen-lockfile && pnpm build && pnpm exec eve build --skip-sandbox-prewarm
-    startCommand: bash start.sh
-    healthCheckPath: /
+    buildCommand: pnpm install --frozen-lockfile --prod=false
+    startCommand: pnpm exec tsx worker/ingest-worker.ts
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 24.6.0
-      - key: EVE_NUXT_PRODUCTION_ORIGIN
-        value: http://127.0.0.1:4274
-      - key: WORKFLOW_LOCAL_DATA_DIR
-        value: /tmp/workflow
       - key: OLLAMA_BASE_URL
         value: https://ollama.com
       - key: DATABASE_URL
@@ -23,11 +19,7 @@ services:
         sync: false
       - key: SARVAM_API_KEY
         sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: BETTER_AUTH_SECRET
-        sync: false
       - key: RENDI_API_KEY
+        sync: false
+      - key: INGEST_WORKER_SECRET
         sync: false
