@@ -102,6 +102,8 @@ const initials = computed(() => {
       </NuxtLink>
     </nav>
 
+    <div class="nav-divider" role="separator" />
+
     <button
       class="new-session"
       :class="{ active: activeChatId === null && activeView === 'chat' }"
@@ -263,6 +265,12 @@ const initials = computed(() => {
   flex-direction: column;
   gap: 2px;
   padding: 4px 8px 0;
+}
+
+.nav-divider {
+  height: 1px;
+  margin: 10px 12px 8px;
+  background: var(--border);
 }
 
 .view-link {
