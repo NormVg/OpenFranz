@@ -211,6 +211,16 @@ onBeforeUnmount(() => {
 <template>
   <div class="session">
     <div v-if="messages.length === 0" class="home">
+      <UiDither
+        class="home-shader"
+        :color-back="isDark ? '#0a0a0a' : '#f5f5f5'"
+        :color-front="isDark ? '#161615' : '#ebebe8'"
+        shape="simplex"
+        type="8x8"
+        :size="2.6"
+        :speed="0.2"
+      />
+      <div class="home-veil" aria-hidden="true" />
       <div class="home-inner">
         <BrandMark class="home-mark" />
         <div class="home-copy">
@@ -279,15 +289,37 @@ onBeforeUnmount(() => {
 }
 
 .home {
+  position: relative;
   display: flex;
   min-height: 0;
   flex: 1;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   padding: 32px 16px 12vh;
 }
 
+.home-shader {
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+}
+
+.home-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 46%,
+    var(--background) 0%,
+    color-mix(in oklab, var(--background) 84%, transparent) 32%,
+    transparent 76%
+  );
+  pointer-events: none;
+}
+
 .home-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   width: 100%;
   max-width: 672px;

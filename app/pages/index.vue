@@ -2,11 +2,15 @@
 import { authClient } from "~/lib/auth-client";
 
 useHead({
+  htmlAttrs: {
+    "data-theme": "dark",
+  },
   title: "OpenFranz — Self-learning content agent",
   meta: [
     {
       name: "description",
-      content: "A self-learning content agent that grows with modern content.",
+      content:
+        "A self-learning content agent that remembers what works and writes what's next.",
     },
   ],
 });
@@ -35,12 +39,26 @@ async function signInWithGoogle() {
 
 <template>
   <main class="landing">
+    <UiDither
+      class="landing-shader"
+      color-back="#0d0d0c"
+      color-front="#1e1c19"
+      shape="pulse"
+      type="8x8"
+      :size="2.2"
+      :speed="0.45"
+    />
+    <div class="landing-veil" aria-hidden="true" />
+
     <section class="center" aria-labelledby="landing-title">
       <BrandMark class="mark" />
 
       <div class="copy">
         <h1 id="landing-title">OpenFranz</h1>
-        <p>A self-learning content agent that grows with modern content.</p>
+        <p>
+          A self-learning content agent that remembers what works and writes
+          what's next.
+        </p>
       </div>
 
       <NuxtLink v-if="session" class="action" to="/app">
@@ -63,18 +81,57 @@ async function signInWithGoogle() {
 
 <style scoped>
 .landing {
+  --landing-bg: #0d0d0c;
+  --landing-fg: #f2efe8;
+  --landing-muted: #8f8b83;
+  --landing-border: rgb(242 239 232 / 0.18);
+  position: relative;
   display: grid;
   min-height: 100dvh;
   place-items: center;
+  overflow: hidden;
   padding: 24px;
-  background: #0d0d0c;
-  color: #f2efe8;
+  background: var(--landing-bg);
+  color: var(--landing-fg);
+}
+
+.landing-shader {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+  mask-image: radial-gradient(
+    circle at 100% 100%,
+    #000 0%,
+    rgb(0 0 0 / 0.9) 38%,
+    rgb(0 0 0 / 0.45) 72%,
+    rgb(0 0 0 / 0.28) 100%
+  );
+}
+
+.landing-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 50% 44%,
+      color-mix(in oklab, var(--landing-bg) 92%, transparent) 0%,
+      color-mix(in oklab, var(--landing-bg) 58%, transparent) 34%,
+      transparent 70%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--landing-bg) 45%, transparent) 0%,
+      transparent 52%
+    );
+  pointer-events: none;
 }
 
 .center {
+  position: relative;
+  z-index: 1;
   display: flex;
   width: 100%;
-  max-width: 520px;
+  max-width: 760px;
   flex-direction: column;
   align-items: center;
   text-align: center;
@@ -83,7 +140,7 @@ async function signInWithGoogle() {
 .mark {
   width: clamp(64px, 8vw, 88px);
   height: auto;
-  color: #f2efe8;
+  color: var(--landing-fg);
   animation: arrive 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -111,10 +168,10 @@ h1 {
 
 .copy p {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #8f8b83;
-  text-wrap: pretty;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--landing-muted);
+  white-space: nowrap;
   animation: arrive 600ms 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -125,10 +182,10 @@ h1 {
   justify-content: center;
   margin-top: 28px;
   padding: 0 18px;
-  border: 1px solid #f2efe8;
+  border: 1px solid var(--landing-fg);
   border-radius: 4px;
-  background: #f2efe8;
-  color: #0d0d0c;
+  background: var(--landing-fg);
+  color: var(--landing-bg);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
@@ -140,8 +197,8 @@ h1 {
 }
 
 .action:hover:not(:disabled) {
-  border-color: #d8d4ca;
-  background: #d8d4ca;
+  border-color: color-mix(in oklab, var(--landing-fg) 85%, var(--landing-bg));
+  background: color-mix(in oklab, var(--landing-fg) 85%, var(--landing-bg));
 }
 
 .action:active:not(:disabled) {
@@ -158,7 +215,7 @@ h1 {
   font-family: var(--font-sans);
   font-size: 11px;
   line-height: 1.5;
-  color: #e8b4b0;
+  color: var(--destructive);
 }
 
 @keyframes arrive {
@@ -170,6 +227,12 @@ h1 {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .copy p {
+    white-space: normal;
   }
 }
 

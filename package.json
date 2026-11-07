@@ -19,6 +19,7 @@
     "@better-auth/drizzle-adapter": "^1.7.18",
     "@jerrycoder/instagram-api": "^2.5.9",
     "@neondatabase/serverless": "^1.2.0",
+    "@paper-design/shaders": "^0.0.82",
     "@pinia/nuxt": "^1.0.3",
     "ai": "^7.0.162",
     "ai-sdk-ollama": "^4.6.2",
