@@ -1,35 +1,58 @@
 <script setup lang="ts">
-import { InboxIcon, Loader2Icon } from "lucide-vue-next";
+import { InboxIcon, InstagramIcon, Loader2Icon } from "lucide-vue-next";
 import type { IngestFolder, IngestResult } from "~~/shared/types/ingest";
+import type { IngestJobRecord } from "~~/shared/types/ingest-pipeline";
 import { ingestService } from "~/services/ingest.service";
+import { ingestJobService } from "~/services/ingest-job.service";
 
-const mode = ref<"text" | "url">("text");
+const mode = ref<"text" | "url" | "instagram">("text");
 const title = ref("");
 const content = ref("");
 const url = ref("");
+const instagramUrl = ref("");
 const folder = ref<IngestFolder>("arsenal");
 const submitting = ref(false);
 const error = ref<string | null>(null);
 const result = ref<IngestResult | null>(null);
+const job = ref<IngestJobRecord | null>(null);
+
+let jobTimer: ReturnType<typeof setInterval> | null = null;
+
+const isJobActive = computed(
+  () => job.value?.status === "queued" || job.value?.status === "processing",
+);
 
 const canSubmit = computed(() => {
-  if (submitting.value) return false;
+  if (submitting.value || isJobActive.value) return false;
 
   if (mode.value === "text") {
     return title.value.trim().length > 0 && content.value.trim().length > 0;
   }
 
-  return url.value.trim().length > 0;
+  if (mode.value === "url") return url.value.trim().length > 0;
+  return instagramUrl.value.trim().length > 0;
 });
 
-function switchMode(next: "text" | "url") {
+function clearJobTimer() {
+  if (jobTimer) clearInterval(jobTimer);
+  jobTimer = null;
+}
+
+function switchMode(next: "text" | "url" | "instagram") {
   mode.value = next;
   error.value = null;
   result.value = null;
+  job.value = null;
+  clearJobTimer();
 }
 
 async function submit() {
   if (!canSubmit.value) return;
+
+  if (mode.value === "instagram") {
+    await submitInstagram();
+    return;
+  }
 
   submitting.value = true;
   error.value = null;
@@ -60,6 +83,48 @@ async function submit() {
     submitting.value = false;
   }
 }
+
+async function submitInstagram() {
+  submitting.value = true;
+  error.value = null;
+  result.value = null;
+  job.value = null;
+
+  try {
+    job.value = await ingestJobService.enqueueInstagram(
+      instagramUrl.value.trim(),
+    );
+    instagramUrl.value = "";
+    startPolling();
+  } catch (cause) {
+    error.value =
+      cause instanceof Error ? cause.message : "Unable to queue that Instagram URL.";
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function startPolling() {
+  clearJobTimer();
+
+  jobTimer = setInterval(async () => {
+    if (!job.value) {
+      clearJobTimer();
+      return;
+    }
+
+    try {
+      job.value = await ingestJobService.get(job.value.id);
+      if (job.value.status === "completed" || job.value.status === "failed") {
+        clearJobTimer();
+      }
+    } catch {
+      clearJobTimer();
+    }
+  }, 3000);
+}
+
+onBeforeUnmount(clearJobTimer);
 </script>
 
 <template>
@@ -93,6 +158,16 @@ async function submit() {
         >
           URL
         </button>
+        <button
+          class="mode-button"
+          :class="{ active: mode === 'instagram' }"
+          type="button"
+          role="tab"
+          :aria-selected="mode === 'instagram'"
+          @click="switchMode('instagram')"
+        >
+          Instagram
+        </button>
       </div>
 
       <form class="form" @submit.prevent="submit">
@@ -116,7 +191,7 @@ async function submit() {
           </label>
         </template>
 
-        <label v-else class="field">
+        <label v-else-if="mode === 'url'" class="field">
           <span>URL</span>
           <input
             v-model="url"
@@ -125,7 +200,16 @@ async function submit() {
           />
         </label>
 
-        <label class="field folder-field">
+        <label v-else class="field">
+          <span>Public Instagram post or reel URL</span>
+          <input
+            v-model="instagramUrl"
+            type="url"
+            placeholder="https://www.instagram.com/reel/..."
+          />
+        </label>
+
+        <label v-if="mode !== 'instagram'" class="field folder-field">
           <span>Folder</span>
           <select v-model="folder">
             <option value="arsenal">/arsenal</option>
@@ -138,11 +222,35 @@ async function submit() {
         <div class="actions">
           <button class="primary" type="submit" :disabled="!canSubmit">
             <Loader2Icon v-if="submitting" class="icon spin" />
+            <InstagramIcon v-else-if="mode === 'instagram'" class="icon" />
             <InboxIcon v-else class="icon" />
-            {{ submitting ? "Ingesting..." : "Ingest" }}
+            {{ submitting ? "Working..." : mode === "instagram" ? "Queue ingestion" : "Ingest" }}
           </button>
         </div>
       </form>
+
+      <div v-if="job" class="job">
+        <div class="job-top">
+          <span class="job-status" :data-status="job.status">{{ job.status }}</span>
+          <span class="job-id">{{ job.id }}</span>
+        </div>
+        <p v-if="job.status === 'failed'" class="job-error">{{ job.error }}</p>
+        <template v-else-if="job.result">
+          <p class="job-summary">{{ job.result.summary }}</p>
+          <p class="job-meta">
+            {{ job.result.mediaType }} · {{ job.result.framesAnalyzed }} frames ·
+            {{ job.result.transcriptCharacters }} transcript characters
+          </p>
+          <ul v-if="job.result.documents.length" class="job-docs">
+            <li v-for="document in job.result.documents" :key="document.path">
+              <span class="job-doc-action">{{ document.action }}</span>
+              <span class="job-doc-path">{{ document.path }}</span>
+            </li>
+          </ul>
+          <p v-else class="job-meta">No documents were written.</p>
+        </template>
+        <p v-else class="job-meta">The worker is processing this source.</p>
+      </div>
 
       <div v-if="result" class="result">
         <p class="result-title">Saved to the workspace</p>
@@ -316,22 +424,26 @@ async function submit() {
   color: var(--destructive);
 }
 
-.result {
+.result,
+.job {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   padding: 12px;
   border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   border-radius: 8px;
   background: color-mix(in oklab, var(--muted) 22%, transparent);
 }
 
-.result-title {
+.result-title,
+.job-summary {
   font-size: 12px;
   font-weight: 600;
 }
 
-.result-path {
+.result-path,
+.job-doc-path,
+.job-id {
   font-family:
     "SF Mono",
     "JetBrains Mono",
@@ -341,7 +453,8 @@ async function submit() {
   overflow-wrap: anywhere;
 }
 
-.result-meta {
+.result-meta,
+.job-meta {
   font-size: 11px;
   color: var(--muted-foreground);
 }
@@ -354,6 +467,54 @@ async function submit() {
   text-decoration: underline;
   text-decoration-color: var(--border);
   text-underline-offset: 3px;
+}
+
+.job-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-status {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.job-status[data-status="completed"] {
+  color: var(--foreground);
+}
+
+.job-status[data-status="failed"],
+.job-error {
+  color: var(--destructive);
+}
+
+.job-error {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.job-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.job-docs li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.job-doc-action {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
 }
 
 @keyframes spin {
