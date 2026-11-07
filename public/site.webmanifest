@@ -1,7 +1,7 @@
 {
   "name": "OpenFranz",
   "short_name": "OpenFranz",
-  "description": "A script-writing agent that learns from people's content.",
+  "description": "A script-writing agent that learns from real people's content.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0d0c",

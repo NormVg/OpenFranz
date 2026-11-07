@@ -2,7 +2,7 @@
 import { authClient } from "~/lib/auth-client";
 
 const description =
-  "A script-writing agent that learns from people's content.";
+  "A script-writing agent that learns from real people's content.";
 const requestUrl = useRequestURL();
 const canonicalUrl = `${requestUrl.origin}/`;
 const socialImageUrl = `${requestUrl.origin}/og.png`;
@@ -79,7 +79,7 @@ async function signInWithGoogle() {
       <div class="copy">
         <h1 id="landing-title">OpenFranz</h1>
         <p>
-          A script-writing agent that learns from people's content.
+          A script-writing agent that learns from real people's content.
         </p>
       </div>
 

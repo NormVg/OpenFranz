@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A script-writing agent that learns from people's content.</strong>
+  <strong>A script-writing agent that learns from real people's content.</strong>
 </p>
 
 <p align="center">
