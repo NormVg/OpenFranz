@@ -44,8 +44,8 @@ export async function findById(id: string): Promise<IngestJobRecord | null> {
   return row ? toRecord(row) : null;
 }
 
-export async function claimNext(): Promise<IngestJobRecord | null> {
-  const [row] = await getDatabase()
+export async function markRunning(id: string): Promise<void> {
+  await getDatabase()
     .update(ingestJobs)
     .set({
       status: "processing",
@@ -53,17 +53,7 @@ export async function claimNext(): Promise<IngestJobRecord | null> {
       startedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(
-      sql`${ingestJobs.id} = (
-        select id from ingest_jobs
-        where status = 'queued'
-        order by created_at
-        limit 1
-      )`,
-    )
-    .returning();
-
-  return row ? toRecord(row) : null;
+    .where(eq(ingestJobs.id, id));
 }
 
 export async function markCompleted(
@@ -92,17 +82,6 @@ export async function markFailed(id: string, error: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(ingestJobs.id, id));
-}
-
-export async function requeueStale(): Promise<void> {
-  await getDatabase()
-    .update(ingestJobs)
-    .set({ status: "queued", updatedAt: new Date() })
-    .where(
-      sql`${ingestJobs.status} = 'processing'
-        and ${ingestJobs.attempts} < 3
-        and ${ingestJobs.updatedAt} < now() - interval '15 minutes'`,
-    );
 }
 
 export async function listRecent(limit = 20): Promise<IngestJobRecord[]> {

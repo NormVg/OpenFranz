@@ -134,3 +134,15 @@ export function isSafeIngestPath(path: string): boolean {
     return false;
   }
 }
+
+const WAV_HEADER_BYTES = 44;
+const WAV_BYTES_PER_SECOND = 32_000;
+
+/**
+ * Rendi writes 16 kHz mono 16-bit PCM, so the byte length is an exact duration
+ * source. This avoids a separate FFprobe call, which some plans do not allow.
+ */
+export function wavDurationSeconds(buffer: ArrayBuffer): number {
+  const bytes = Math.max(buffer.byteLength - WAV_HEADER_BYTES, 0);
+  return bytes / WAV_BYTES_PER_SECOND;
+}

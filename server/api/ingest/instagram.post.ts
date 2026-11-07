@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { start } from "workflow/api";
 import * as ingestJobRepository from "~~/server/repositories/ingest-job.repository";
+import { ingestWorkflow } from "../../workflows/ingest";
 import { isInstagramPostUrl } from "~~/shared/utils/instagram";
 import { defineServiceHandler } from "~~/server/utils/service-handler";
 import { ServiceError } from "~~/server/utils/service-error";
@@ -24,5 +26,7 @@ export default defineServiceHandler(async (event) => {
     );
   }
 
-  return ingestJobRepository.create(parsed.data.url);
+  const job = await ingestJobRepository.create(parsed.data.url);
+  await start(ingestWorkflow, [job.id]);
+  return job;
 });

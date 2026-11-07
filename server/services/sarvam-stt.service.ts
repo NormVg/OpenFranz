@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import type { TranscriptSegment } from "../../shared/types/ingest-pipeline";
 import { ServiceError } from "../utils/service-error";
 
@@ -190,10 +189,9 @@ function parsePayload(
 }
 
 async function transcribeRest(
-  audioPath: string,
+  audio: ArrayBuffer,
   durationSeconds: number,
 ): Promise<SarvamTranscription> {
-  const audio = await readFile(audioPath);
   const form = new FormData();
   form.append("file", new Blob([audio], { type: "audio/wav" }), "audio.wav");
   form.append("model", "saaras:v3");
@@ -209,7 +207,7 @@ async function transcribeRest(
 }
 
 async function transcribeBatch(
-  audioPath: string,
+  audio: ArrayBuffer,
   durationSeconds: number,
 ): Promise<SarvamTranscription> {
   const init = await request<BatchInitResponse>("/speech-to-text/job/v1", {
@@ -237,7 +235,6 @@ async function transcribeBatch(
     throw new ServiceError(502, "Sarvam did not return an upload URL.");
   }
 
-  const audio = await readFile(audioPath);
   const uploadResponse = await fetch(uploadUrl, {
     method: "PUT",
     body: audio,
@@ -316,12 +313,12 @@ async function transcribeBatch(
 }
 
 export async function transcribeAudio(
-  audioPath: string,
+  audio: ArrayBuffer,
   durationSeconds: number,
 ): Promise<SarvamTranscription> {
   if (durationSeconds <= REST_LIMIT_SECONDS) {
-    return transcribeRest(audioPath, durationSeconds);
+    return transcribeRest(audio, durationSeconds);
   }
 
-  return transcribeBatch(audioPath, durationSeconds);
+  return transcribeBatch(audio, durationSeconds);
 }

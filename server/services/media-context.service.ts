@@ -1,170 +1,79 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
-import type { PreparedMediaContext } from "../../shared/types/ingest-pipeline";
-import { selectFrameTimes } from "../../shared/utils/ingest-pipeline";
+import { Buffer } from "node:buffer";
+import type { TranscriptSegment } from "../../shared/types/ingest-pipeline";
+import type { InstagramMediaResult } from "../../shared/utils/instagram";
+import {
+  selectFrameTimes,
+  wavDurationSeconds,
+} from "../../shared/utils/ingest-pipeline";
 import { ServiceError } from "../utils/service-error";
-import { fetchInstagramMedia } from "./instagram.service";
 import { ollamaVision } from "./ollama.service";
+import { extractAudio, extractFrames } from "./rendi.service";
 import { transcribeAudio } from "./sarvam-stt.service";
+import type { SarvamTranscription } from "./sarvam-stt.service";
 
-const execFileAsync = promisify(execFile);
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+const MAX_FRAME_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES = 12;
 const MAX_FRAMES = 24;
-const SCENE_THRESHOLD = 0.08;
+const VISION_BATCH_SIZE = 4;
 
-async function downloadToFile(
+async function fetchArrayBuffer(
   url: string,
-  destination: string,
   maxBytes: number,
-): Promise<void> {
+  label: string,
+): Promise<ArrayBuffer> {
   const response = await fetch(url, {
     redirect: "follow",
     signal: AbortSignal.timeout(60_000),
   });
 
   if (!response.ok) {
-    throw new ServiceError(502, `Media download failed (${response.status}).`);
+    throw new ServiceError(
+      502,
+      `Rendi ${label} download failed (${response.status}).`,
+    );
   }
 
   const declared = Number(response.headers.get("content-length") ?? 0);
   if (declared > maxBytes) {
-    throw new ServiceError(413, "The media file is too large to ingest.");
+    throw new ServiceError(413, `The ${label} file is too large to ingest.`);
   }
 
   const buffer = await response.arrayBuffer();
   if (buffer.byteLength > maxBytes) {
-    throw new ServiceError(413, "The media file is too large to ingest.");
+    throw new ServiceError(413, `The ${label} file is too large to ingest.`);
   }
 
-  await writeFile(destination, Buffer.from(buffer));
+  return buffer;
 }
 
-async function runFfmpeg(args: string[]): Promise<void> {
-  await execFileAsync("ffmpeg", args, {
-    maxBuffer: 16 * 1024 * 1024,
-  });
-}
-
-async function probeDuration(videoPath: string): Promise<number> {
-  const { stdout } = await execFileAsync(
-    "ffprobe",
-    [
-      "-v",
-      "error",
-      "-show_entries",
-      "format=duration",
-      "-of",
-      "default=noprint_wrappers=1:nokey=1",
-      videoPath,
-    ],
-    { maxBuffer: 1024 * 1024 },
-  );
-
-  const duration = Number(stdout.trim());
-  return Number.isFinite(duration) ? duration : 0;
-}
-
-async function extractAudio(videoPath: string, audioPath: string): Promise<void> {
-  await runFfmpeg([
-    "-y",
-    "-i",
-    videoPath,
-    "-vn",
-    "-ac",
-    "1",
-    "-ar",
-    "16000",
-    "-f",
-    "wav",
-    audioPath,
-  ]);
-}
-
-/**
- * Best-effort visual cut detection. Scene detection is an optimisation, so a
- * failure here must never fail the ingestion.
- */
-async function detectSceneTimes(videoPath: string): Promise<number[]> {
-  try {
-    const { stderr } = await execFileAsync(
-      "ffmpeg",
-      [
-        "-hide_banner",
-        "-i",
-        videoPath,
-        "-filter:v",
-        `select='gt(scene,${SCENE_THRESHOLD})',showinfo`,
-        "-f",
-        "null",
-        "-",
-      ],
-      { maxBuffer: 32 * 1024 * 1024 },
-    );
-
-    return [...stderr.matchAll(/pts_time:([0-9.]+)/g)]
-      .map((match) => Number(match[1]))
-      .filter((time) => Number.isFinite(time) && time > 0.2);
-  } catch {
-    return [];
-  }
-}
-
-async function extractFrames(
-  videoPath: string,
-  directory: string,
-  times: number[],
-): Promise<string[]> {
-  const frames: string[] = [];
-
-  for (const [index, time] of times.entries()) {
-    const framePath = join(directory, `frame-${index}.jpg`);
-    await runFfmpeg([
-      "-y",
-      "-ss",
-      String(time),
-      "-i",
-      videoPath,
-      "-frames:v",
-      "1",
-      "-vf",
-      "scale=768:-1",
-      "-q:v",
-      "3",
-      framePath,
-    ]);
-    frames.push(framePath);
-  }
-
-  return frames;
-}
-
-async function asDataUrl(path: string): Promise<string> {
-  const buffer = await readFile(path);
-  return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+function toDataUrl(buffer: ArrayBuffer, mimeType: string): string {
+  return `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
 }
 
 async function analyzeImages(options: {
-  images: string[];
+  images: ArrayBuffer[];
   transcript?: string;
   mediaType: "reel" | "post";
 }): Promise<string> {
   const analyses: string[] = [];
 
-  for (let index = 0; index < options.images.length; index += 4) {
-    const batch = options.images.slice(index, index + 4);
-    const dataUrls = await Promise.all(batch.map(asDataUrl));
+  for (
+    let index = 0;
+    index < options.images.length;
+    index += VISION_BATCH_SIZE
+  ) {
+    const batch = options.images
+      .slice(index, index + VISION_BATCH_SIZE)
+      .map((buffer) => toDataUrl(buffer, "image/jpeg"));
     const prompt = options.mediaType === "reel"
       ? `These are frames from an Instagram Reel, ordered by timestamp. The speech transcript is:\n${options.transcript ?? "(no speech detected)"}\n\nDescribe the visible text, visuals, demonstrations, editing patterns, and storytelling techniques in these frames. Connect what is shown to what is said. Be specific and do not invent details.`
       : "These are images from a public Instagram post. Transcribe useful visible text and describe the layout, examples, writing patterns, hooks, and teaching techniques. Be specific and do not invent details.";
 
     const analysis = await ollamaVision({
       text: prompt,
-      images: dataUrls,
+      images: batch,
     });
     analyses.push(analysis);
   }
@@ -172,76 +81,57 @@ async function analyzeImages(options: {
   return analyses.join("\n\n");
 }
 
-export async function prepareInstagramContext(
-  sourceUrl: string,
-): Promise<PreparedMediaContext> {
-  const media = await fetchInstagramMedia(sourceUrl);
-  const directory = await mkdtemp(join(tmpdir(), "openfranz-ingest-"));
+export async function extractReelAudio(videoUrl: string): Promise<string> {
+  return extractAudio(videoUrl);
+}
 
-  try {
-    if (media.type === "video") {
-      const videoUrl = media.media[0]?.url;
-      if (!videoUrl) throw new ServiceError(502, "No reel video was returned.");
+export async function transcribeReelAudio(
+  audioUrl: string,
+): Promise<{ transcription: SarvamTranscription; durationSeconds: number }> {
+  const audio = await fetchArrayBuffer(audioUrl, MAX_AUDIO_BYTES, "audio");
+  const durationSeconds = wavDurationSeconds(audio);
+  const transcription = await transcribeAudio(audio, durationSeconds);
 
-      const videoPath = join(directory, "reel.mp4");
-      await downloadToFile(videoUrl, videoPath, MAX_VIDEO_BYTES);
+  return { transcription, durationSeconds };
+}
 
-      const duration = await probeDuration(videoPath);
-      const audioPath = join(directory, "audio.wav");
-      const [sceneTimes] = await Promise.all([
-        detectSceneTimes(videoPath),
-        extractAudio(videoPath, audioPath),
-      ]);
-      const transcription = await transcribeAudio(audioPath, duration);
-      const times = selectFrameTimes(
-        transcription.segments,
-        duration,
-        MAX_FRAMES,
-        sceneTimes,
-      );
-      const framePaths = await extractFrames(videoPath, directory, times);
-      const visualAnalysis = await analyzeImages({
-        images: framePaths,
-        transcript: transcription.transcript,
-        mediaType: "reel",
-      });
+export function planReelFrames(
+  segments: TranscriptSegment[],
+  durationSeconds: number,
+): number[] {
+  return selectFrameTimes(segments, durationSeconds, MAX_FRAMES);
+}
 
-      return {
-        sourceUrl,
-        mediaType: "reel",
-        transcript: transcription.transcript,
-        segments: transcription.segments,
-        visualAnalysis,
-        frameCount: framePaths.length,
-      };
-    }
+export function planPostImages(media: InstagramMediaResult): string[] {
+  return media.media.slice(0, MAX_IMAGES).map((item) => item.url);
+}
 
-    const images = media.media.slice(0, MAX_IMAGES);
-    if (images.length === 0) {
-      throw new ServiceError(502, "No post images were returned.");
-    }
+export async function extractReelFrames(
+  videoUrl: string,
+  times: number[],
+): Promise<string[]> {
+  return extractFrames(videoUrl, times);
+}
 
-    const paths: string[] = [];
-    for (const [index, item] of images.entries()) {
-      const path = join(directory, `post-${index}.jpg`);
-      await downloadToFile(item.url, path, MAX_IMAGE_BYTES);
-      paths.push(path);
-    }
+export async function analyzeReelFrames(
+  frameUrls: string[],
+  transcript: string,
+): Promise<string> {
+  const frames = await Promise.all(
+    frameUrls.map((url) => fetchArrayBuffer(url, MAX_FRAME_BYTES, "frame")),
+  );
 
-    const visualAnalysis = await analyzeImages({
-      images: paths,
-      mediaType: "post",
-    });
+  return analyzeImages({
+    images: frames,
+    transcript,
+    mediaType: "reel",
+  });
+}
 
-    return {
-      sourceUrl,
-      mediaType: "post",
-      transcript: "",
-      segments: [],
-      visualAnalysis,
-      frameCount: paths.length,
-    };
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
+export async function analyzePostImages(imageUrls: string[]): Promise<string> {
+  const images = await Promise.all(
+    imageUrls.map((url) => fetchArrayBuffer(url, MAX_IMAGE_BYTES, "image")),
+  );
+
+  return analyzeImages({ images, mediaType: "post" });
 }

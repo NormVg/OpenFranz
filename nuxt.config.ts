@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
-  modules: ['eve/nuxt', '@pinia/nuxt'],
+  modules: ['eve/nuxt', '@pinia/nuxt', 'workflow/nuxt'],
   css: ['markstream-vue/index.css', '~/assets/css/main.css'],
   vite: {
     optimizeDeps: {
