@@ -398,6 +398,9 @@ onBeforeUnmount(stopPolling);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .job {
@@ -461,7 +464,9 @@ onBeforeUnmount(stopPolling);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .docs li {

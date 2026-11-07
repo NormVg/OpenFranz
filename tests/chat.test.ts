@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createTitle } from "../shared/utils/chat.ts";
+import { appendTranscript, createTitle } from "../shared/utils/chat.ts";
 import {
   chatIdSchema,
   chatTitleSchema,
@@ -43,4 +43,25 @@ test("chat ids must be UUIDs", () => {
     chatIdSchema.safeParse("6f1c5e4e-7f0a-4c0f-9c4b-2f0f6c3c4a11").success,
     true,
   );
+});
+
+test("appendTranscript adds a new recording after the existing draft", () => {
+  assert.equal(
+    appendTranscript("Write a reel intro.", "Make it thirty seconds."),
+    "Write a reel intro. Make it thirty seconds.",
+  );
+});
+
+test("appendTranscript keeps the draft when the transcript is empty", () => {
+  assert.equal(appendTranscript("Keep this.", "   "), "Keep this.");
+});
+
+test("appendTranscript returns the transcript when the draft is empty", () => {
+  assert.equal(appendTranscript("   ", "  Start here.  "), "Start here.");
+});
+
+test("appendTranscript does not rewrite earlier recordings", () => {
+  const first = appendTranscript("", "First thought.");
+  const second = appendTranscript(first, "Second thought.");
+  assert.equal(second, "First thought. Second thought.");
 });

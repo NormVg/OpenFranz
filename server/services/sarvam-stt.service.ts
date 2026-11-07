@@ -1,7 +1,7 @@
 import type { TranscriptSegment } from "../../shared/types/ingest-pipeline";
 import { ServiceError } from "../utils/service-error";
 
-const REST_LIMIT_SECONDS = 25;
+const REST_LIMIT_SECONDS = 30;
 
 type SarvamTimestamps = {
   words?: string[];

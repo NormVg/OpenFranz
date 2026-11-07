@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { EveMessage, EveMessagePart } from "eve/client";
 import {
+  BrainIcon,
   CheckIcon,
   ChevronDownIcon,
   CopyIcon,
@@ -8,6 +9,7 @@ import {
 } from "lucide-vue-next";
 import { MarkdownRender } from "markstream-vue";
 import { parseBrandContext } from "~~/shared/utils/brand-context";
+import { parseDeepMode } from "~~/shared/utils/deep-mode";
 
 const props = defineProps<{
   message: EveMessage;
@@ -23,14 +25,29 @@ const userBrand = computed(() => {
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n\n");
-  const parsed = parseBrandContext(text);
+  const parsed = parseBrandContext(parseDeepMode(text).text);
 
   if (!parsed.slug) return null;
-  return { slug: parsed.slug, name: parsed.name ?? parsed.slug };
+  return {
+    slug: parsed.slug,
+    name: parsed.name ?? parsed.slug,
+    product: parsed.product,
+  };
+});
+
+const userDeep = computed(() => {
+  if (!isUser.value) return false;
+
+  const text = props.message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n\n");
+
+  return parseDeepMode(text).deep;
 });
 
 function displayText(text: string): string {
-  return parseBrandContext(text).text;
+  return parseBrandContext(parseDeepMode(text).text).text;
 }
 
 function isPartStreaming(part: EveMessagePart): boolean {
@@ -108,9 +125,16 @@ onBeforeUnmount(() => {
 <template>
   <article class="message" :data-role="message.role">
     <div :class="isUser ? 'user-bubble' : 'assistant-body'">
-      <div v-if="isUser && userBrand" class="user-brand">
-        <TagIcon class="user-brand-icon" aria-hidden="true" />
-        {{ userBrand.name }}
+      <div v-if="isUser && (userBrand || userDeep)" class="user-chips">
+        <div v-if="userDeep" class="user-deep">
+          <BrainIcon class="user-deep-icon" aria-hidden="true" />
+          Deep
+        </div>
+        <div v-if="userBrand" class="user-brand">
+          <TagIcon class="user-brand-icon" aria-hidden="true" />
+          {{ userBrand.name }}
+          <template v-if="userBrand.product"> · {{ userBrand.product }}</template>
+        </div>
       </div>
 
       <div v-if="!isUser && reasoningText" class="reasoning-block">
@@ -228,16 +252,40 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
 }
 
+.user-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
 .user-brand {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 4px;
   padding: 1px 6px;
   border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   border-radius: 999px;
   font-size: 10.5px;
   color: var(--muted-foreground);
+}
+
+.user-deep {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.user-deep-icon {
+  width: 10px;
+  height: 10px;
 }
 
 .user-brand-icon {

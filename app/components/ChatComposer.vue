@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import {
   ArrowUpIcon,
+  BrainIcon,
+  ChevronLeftIcon,
   ImagePlusIcon,
   Loader2Icon,
+  MicIcon,
   SearchIcon,
   SquareIcon,
   TagIcon,
   XIcon,
 } from "lucide-vue-next";
-import type { BrandRecord } from "~~/shared/types/brand";
+import type { BrandProduct, BrandRecord } from "~~/shared/types/brand";
 import type { BrandContext } from "~~/shared/utils/brand-context";
 import {
   MAX_CHAT_ATTACHMENTS,
   validateChatAttachment,
 } from "~~/shared/utils/chat-attachments";
 import { brandService } from "~/services/brand.service";
+import { transcribeService } from "~/services/transcribe.service";
+import { appendTranscript } from "~~/shared/utils/chat";
 
 interface ChatAttachment {
   id: string;
@@ -44,7 +49,12 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: "update:modelValue", value: string): void;
-  (event: "submit", files: File[], brand: BrandContext | null): void;
+  (
+    event: "submit",
+    files: File[],
+    brand: BrandContext | null,
+    deep: boolean,
+  ): void;
   (event: "stop"): void;
 }>();
 
@@ -58,6 +68,20 @@ const brandMenuOpen = ref(false);
 const brandQuery = ref("");
 const brandLoading = ref(false);
 const selectedBrand = ref<BrandRecord | null>(null);
+const selectedProduct = ref<BrandProduct | null>(null);
+const pendingBrand = ref<BrandRecord | null>(null);
+const deepMode = ref(false);
+const isRecording = ref(false);
+const isTranscribing = ref(false);
+const recordingSeconds = ref(0);
+const voiceError = ref<string | null>(null);
+
+const MAX_RECORDING_SECONDS = 120;
+
+let mediaRecorder: MediaRecorder | null = null;
+let mediaStream: MediaStream | null = null;
+let recordingTimer: ReturnType<typeof setInterval> | null = null;
+let audioChunks: Blob[] = [];
 
 const filteredBrands = computed(() => {
   const query = brandQuery.value.trim().toLowerCase();
@@ -115,7 +139,14 @@ function clearAttachments() {
 
 async function toggleBrandMenu() {
   brandMenuOpen.value = !brandMenuOpen.value;
-  if (!brandMenuOpen.value || brands.value.length > 0) return;
+
+  if (!brandMenuOpen.value) {
+    pendingBrand.value = null;
+    brandQuery.value = "";
+    return;
+  }
+
+  if (brands.value.length > 0) return;
 
   brandLoading.value = true;
 
@@ -128,14 +159,192 @@ async function toggleBrandMenu() {
   }
 }
 
-function selectBrand(brand: BrandRecord) {
-  selectedBrand.value = brand;
+function chooseBrand(brand: BrandRecord) {
+  pendingBrand.value = brand;
+  brandQuery.value = "";
+}
+
+function chooseProduct(product: BrandProduct | null) {
+  if (!pendingBrand.value) return;
+
+  selectedBrand.value = pendingBrand.value;
+  selectedProduct.value = product;
+  pendingBrand.value = null;
   brandMenuOpen.value = false;
+  brandQuery.value = "";
+}
+
+function backToBrands() {
+  pendingBrand.value = null;
   brandQuery.value = "";
 }
 
 function clearBrand() {
   selectedBrand.value = null;
+  selectedProduct.value = null;
+}
+
+function writeAscii(view: DataView, offset: number, value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
+}
+
+function encodeWav(buffer: AudioBuffer): ArrayBuffer {
+  const channels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const length = buffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = channels * bytesPerSample;
+  const dataSize = length * blockAlign;
+  const arrayBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(arrayBuffer);
+
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  const channelData = Array.from({ length: channels }, (_, index) =>
+    buffer.getChannelData(index),
+  );
+  let offset = 44;
+
+  for (let index = 0; index < length; index += 1) {
+    for (let channel = 0; channel < channels; channel += 1) {
+      const sample = Math.max(-1, Math.min(1, channelData[channel]![index]!));
+      view.setInt16(
+        offset,
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+        true,
+      );
+      offset += 2;
+    }
+  }
+
+  return arrayBuffer;
+}
+
+function clearRecordingTimer() {
+  if (!recordingTimer) return;
+  clearInterval(recordingTimer);
+  recordingTimer = null;
+}
+
+function stopStream() {
+  mediaStream?.getTracks().forEach((track) => track.stop());
+  mediaStream = null;
+}
+
+async function transcribeRecording(chunks: Blob[], mimeType: string) {
+  isTranscribing.value = true;
+  voiceError.value = null;
+
+  try {
+    const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+    const encoded = await blob.arrayBuffer();
+    const context = new AudioContext();
+    const decoded = await context.decodeAudioData(encoded);
+    const wav = encodeWav(decoded);
+    const duration = decoded.duration;
+    await context.close();
+
+    const text = (await transcribeService.transcribe(wav, duration)).trim();
+    if (!text) {
+      voiceError.value = "I could not hear anything. Try again.";
+      return;
+    }
+
+    const next = appendTranscript(props.modelValue, text);
+    emit("update:modelValue", next);
+    await nextTick();
+    textarea.value?.focus();
+    textarea.value?.setSelectionRange(next.length, next.length);
+  } catch {
+    voiceError.value = "Unable to transcribe that recording. Please try again.";
+  } finally {
+    isTranscribing.value = false;
+  }
+}
+
+function stopRecording() {
+  if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+  mediaRecorder.stop();
+  clearRecordingTimer();
+  stopStream();
+}
+
+async function startRecording() {
+  if (isRecording.value || isTranscribing.value) return;
+
+  voiceError.value = null;
+
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.mediaDevices?.getUserMedia ||
+    typeof MediaRecorder === "undefined"
+  ) {
+    voiceError.value = "Voice input is not supported in this browser.";
+    return;
+  }
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(mediaStream);
+    const mimeType = mediaRecorder.mimeType;
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) audioChunks.push(event.data);
+    };
+    mediaRecorder.onstop = () => {
+      const chunks = audioChunks;
+      audioChunks = [];
+      mediaRecorder = null;
+      isRecording.value = false;
+      recordingSeconds.value = 0;
+      void transcribeRecording(chunks, mimeType);
+    };
+
+    mediaRecorder.start();
+    isRecording.value = true;
+    recordingSeconds.value = 0;
+    recordingTimer = setInterval(() => {
+      recordingSeconds.value += 1;
+      if (recordingSeconds.value >= MAX_RECORDING_SECONDS) {
+        stopRecording();
+      }
+    }, 1000);
+  } catch {
+    stopStream();
+    isRecording.value = false;
+    voiceError.value =
+      "Microphone access was blocked. Allow it in the browser and try again.";
+  }
+}
+
+function toggleRecording() {
+  if (isRecording.value) {
+    stopRecording();
+    return;
+  }
+
+  void startRecording();
+}
+
+function formatRecordingTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
 function submit() {
@@ -146,11 +355,18 @@ function submit() {
     "submit",
     files,
     selectedBrand.value
-      ? { slug: selectedBrand.value.slug, name: selectedBrand.value.name }
+      ? {
+          slug: selectedBrand.value.slug,
+          name: selectedBrand.value.name,
+          product: selectedProduct.value?.name ?? null,
+        }
       : null,
+    deepMode.value,
   );
   clearAttachments();
   selectedBrand.value = null;
+  selectedProduct.value = null;
+  deepMode.value = false;
   attachmentError.value = null;
 }
 
@@ -206,7 +422,16 @@ onMounted(() => {
   }
 });
 
-onBeforeUnmount(clearAttachments);
+onBeforeUnmount(() => {
+  clearAttachments();
+  clearRecordingTimer();
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.onstop = null;
+    mediaRecorder.stop();
+  }
+  mediaRecorder = null;
+  stopStream();
+});
 </script>
 
 <template>
@@ -238,7 +463,10 @@ onBeforeUnmount(clearAttachments);
 
     <div v-if="selectedBrand" class="brand-chip">
       <TagIcon class="brand-chip-icon" aria-hidden="true" />
-      <span class="brand-chip-name">{{ selectedBrand.name }}</span>
+      <span class="brand-chip-name">
+        {{ selectedBrand.name }}
+        <template v-if="selectedProduct"> · {{ selectedProduct.name }}</template>
+      </span>
       <button
         class="brand-chip-remove"
         type="button"
@@ -265,6 +493,10 @@ onBeforeUnmount(clearAttachments);
 
     <p v-if="attachmentError" class="attachment-error" role="alert">
       {{ attachmentError }}
+    </p>
+
+    <p v-if="voiceError" class="attachment-error" role="alert">
+      {{ voiceError }}
     </p>
 
     <div class="composer-footer">
@@ -298,9 +530,49 @@ onBeforeUnmount(clearAttachments);
         >
           <TagIcon class="icon" />
         </button>
+        <button
+          class="icon-button attach deep-toggle"
+          :class="{ active: deepMode }"
+          type="button"
+          :disabled="disabled || busy"
+          :aria-pressed="deepMode"
+          :aria-label="deepMode ? 'Turn off deep mode' : 'Deep mode'"
+          :title="
+            deepMode
+              ? 'Deep mode is on: the agent asks questions before writing'
+              : 'Deep mode: ask questions before writing'
+          "
+          @click="deepMode = !deepMode"
+        >
+          <BrainIcon class="icon" />
+          <span class="deep-toggle-label" aria-hidden="true">Deep</span>
+        </button>
       </div>
 
       <div class="composer-actions">
+        <button
+          class="icon-button attach voice-toggle"
+          :class="{ recording: isRecording, transcribing: isTranscribing }"
+          type="button"
+          :disabled="disabled || busy || isTranscribing"
+          :aria-pressed="isRecording"
+          :aria-label="
+            isRecording ? 'Stop recording' : 'Record a voice message'
+          "
+          :title="
+            isRecording
+              ? 'Stop recording and transcribe'
+              : 'Record a voice message'
+          "
+          @click="toggleRecording"
+        >
+          <Loader2Icon v-if="isTranscribing" class="icon spin" />
+          <SquareIcon v-else-if="isRecording" class="icon fill" />
+          <MicIcon v-else class="icon" />
+          <span v-if="isRecording" class="voice-timer">
+            {{ formatRecordingTime(recordingSeconds) }}
+          </span>
+        </button>
         <button
           v-if="busy"
           class="stop-button"
@@ -334,38 +606,83 @@ onBeforeUnmount(clearAttachments);
       v-if="brandMenuOpen"
       class="brand-menu"
       role="listbox"
-      aria-label="Brands"
+      :aria-label="pendingBrand ? 'Products' : 'Brands'"
     >
-      <div class="brand-search">
-        <SearchIcon class="brand-search-icon" aria-hidden="true" />
-        <input
-          v-model="brandQuery"
-          class="brand-search-input"
-          type="search"
-          placeholder="Search brands"
-          aria-label="Search brands"
-        />
-      </div>
+      <template v-if="!pendingBrand">
+        <div class="brand-search">
+          <SearchIcon class="brand-search-icon" aria-hidden="true" />
+          <input
+            v-model="brandQuery"
+            class="brand-search-input"
+            type="search"
+            placeholder="Search brands"
+            aria-label="Search brands"
+          />
+        </div>
 
-      <p v-if="brandLoading" class="brand-state">Loading...</p>
-      <p v-else-if="filteredBrands.length === 0" class="brand-state">
-        No brands yet.
-      </p>
-      <button
-        v-for="brand in filteredBrands"
-        :key="brand.id"
-        class="brand-option"
-        type="button"
-        role="option"
-        :aria-selected="selectedBrand?.id === brand.id"
-        @click="selectBrand(brand)"
-      >
-        <span class="brand-option-name">{{ brand.name }}</span>
-        <span class="brand-option-meta">
-          {{ brand.products.length }}
-          {{ brand.products.length === 1 ? "product" : "products" }}
-        </span>
-      </button>
+        <p v-if="brandLoading" class="brand-state">Loading...</p>
+        <p v-else-if="filteredBrands.length === 0" class="brand-state">
+          No brands yet.
+        </p>
+        <button
+          v-for="brand in filteredBrands"
+          :key="brand.id"
+          class="brand-option"
+          type="button"
+          role="option"
+          :aria-selected="selectedBrand?.id === brand.id"
+          @click="chooseBrand(brand)"
+        >
+          <span class="brand-option-name">{{ brand.name }}</span>
+          <span class="brand-option-meta">
+            {{ brand.products.length }}
+            {{ brand.products.length === 1 ? "product" : "products" }}
+          </span>
+        </button>
+      </template>
+
+      <template v-else>
+        <div class="brand-step-header">
+          <button
+            class="brand-back"
+            type="button"
+            aria-label="Back to brands"
+            @click="backToBrands"
+          >
+            <ChevronLeftIcon class="brand-back-icon" aria-hidden="true" />
+          </button>
+          <span class="brand-step-title">{{ pendingBrand.name }}</span>
+        </div>
+
+        <button
+          class="brand-option"
+          type="button"
+          role="option"
+          :aria-selected="selectedProduct === null"
+          @click="chooseProduct(null)"
+        >
+          <span class="brand-option-name">Whole brand</span>
+          <span class="brand-option-meta">Use the brand-level facts</span>
+        </button>
+
+        <p v-if="pendingBrand.products.length === 0" class="brand-state">
+          No products yet.
+        </p>
+        <button
+          v-for="product in pendingBrand.products"
+          :key="product.name"
+          class="brand-option"
+          type="button"
+          role="option"
+          :aria-selected="selectedProduct?.name === product.name"
+          @click="chooseProduct(product)"
+        >
+          <span class="brand-option-name">{{ product.name }}</span>
+          <span class="brand-option-meta">
+            {{ product.description || product.pricing || "Product" }}
+          </span>
+        </button>
+      </template>
     </div>
 
     <div v-if="isDragging" class="drop-overlay" aria-hidden="true">
@@ -514,6 +831,44 @@ onBeforeUnmount(clearAttachments);
   padding: 2px 2px 6px;
 }
 
+.brand-step-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 6px;
+}
+
+.brand-back {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.brand-back:hover {
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  color: var(--foreground);
+}
+
+.brand-back-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.brand-step-title {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .brand-search-icon {
   position: absolute;
   top: 50%;
@@ -647,6 +1002,16 @@ onBeforeUnmount(clearAttachments);
   color: var(--foreground);
 }
 
+.icon-button.attach.active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.icon-button.attach.active:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 88%, transparent);
+  color: var(--background);
+}
+
 .icon-button.attach:disabled {
   opacity: 0.3;
 }
@@ -654,6 +1019,91 @@ onBeforeUnmount(clearAttachments);
 .icon-button.attach .icon {
   width: 15px;
   height: 15px;
+}
+
+.deep-toggle {
+  width: auto;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  transition:
+    max-width 180ms ease-out,
+    padding 180ms ease-out,
+    gap 180ms ease-out,
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.deep-toggle.active {
+  max-width: 80px;
+  padding: 0 9px;
+  gap: 5px;
+}
+
+.deep-toggle-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    max-width 180ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.deep-toggle.active .deep-toggle-label {
+  max-width: 40px;
+  opacity: 1;
+}
+
+.voice-toggle {
+  width: auto;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  transition:
+    max-width 180ms ease-out,
+    padding 180ms ease-out,
+    gap 180ms ease-out,
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.voice-toggle.recording {
+  max-width: 84px;
+  padding: 0 9px;
+  gap: 5px;
+  background: color-mix(in oklab, var(--destructive) 16%, transparent);
+  color: var(--destructive);
+}
+
+.voice-toggle.recording .icon {
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+.voice-timer {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@keyframes voice-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .icon-button.send {
@@ -767,6 +1217,10 @@ onBeforeUnmount(clearAttachments);
 
 @media (prefers-reduced-motion: reduce) {
   .icon.spin {
+    animation: none;
+  }
+
+  .voice-toggle.recording .icon {
     animation: none;
   }
 }
