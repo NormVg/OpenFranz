@@ -19,6 +19,7 @@ import {
 } from "~~/shared/utils/chat-attachments";
 import { brandService } from "~/services/brand.service";
 import { transcribeService } from "~/services/transcribe.service";
+import { appendTranscript } from "~~/shared/utils/chat";
 
 interface ChatAttachment {
   id: string;
@@ -75,7 +76,7 @@ const isTranscribing = ref(false);
 const recordingSeconds = ref(0);
 const voiceError = ref<string | null>(null);
 
-const MAX_RECORDING_SECONDS = 25;
+const MAX_RECORDING_SECONDS = 120;
 
 let mediaRecorder: MediaRecorder | null = null;
 let mediaStream: MediaStream | null = null;
@@ -263,8 +264,11 @@ async function transcribeRecording(chunks: Blob[], mimeType: string) {
       return;
     }
 
-    const next = [props.modelValue.trim(), text].filter(Boolean).join(" ");
+    const next = appendTranscript(props.modelValue, text);
     emit("update:modelValue", next);
+    await nextTick();
+    textarea.value?.focus();
+    textarea.value?.setSelectionRange(next.length, next.length);
   } catch {
     voiceError.value = "Unable to transcribe that recording. Please try again.";
   } finally {
@@ -543,6 +547,9 @@ onBeforeUnmount(() => {
           <BrainIcon class="icon" />
           <span class="deep-toggle-label" aria-hidden="true">Deep</span>
         </button>
+      </div>
+
+      <div class="composer-actions">
         <button
           class="icon-button attach voice-toggle"
           :class="{ recording: isRecording, transcribing: isTranscribing }"
@@ -566,9 +573,6 @@ onBeforeUnmount(() => {
             {{ formatRecordingTime(recordingSeconds) }}
           </span>
         </button>
-      </div>
-
-      <div class="composer-actions">
         <button
           v-if="busy"
           class="stop-button"
@@ -1019,6 +1023,7 @@ onBeforeUnmount(() => {
 
 .deep-toggle {
   width: auto;
+  min-width: 28px;
   max-width: 28px;
   padding: 0;
   gap: 0;
@@ -1038,20 +1043,27 @@ onBeforeUnmount(() => {
 }
 
 .deep-toggle-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 150ms ease-out;
+  transition:
+    max-width 180ms ease-out,
+    opacity 150ms ease-out;
 }
 
 .deep-toggle.active .deep-toggle-label {
+  max-width: 40px;
   opacity: 1;
 }
 
 .voice-toggle {
   width: auto;
+  min-width: 28px;
   max-width: 28px;
   padding: 0;
   gap: 0;
