@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { XIcon } from "lucide-vue-next";
+import { MarkdownRender } from "markstream-vue";
 import type { VfsEntry, VfsLinkInfo } from "~~/shared/types/vfs";
 
 defineProps<{
@@ -16,12 +17,33 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const isDark = ref(true);
+let themeObserver: MutationObserver | null = null;
+
+function readTheme() {
+  isDark.value = document.documentElement.dataset.theme !== "light";
+}
+
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
+
+onMounted(() => {
+  readTheme();
+  themeObserver = new MutationObserver(readTheme);
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme", "class"],
+  });
+});
+
+onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  themeObserver = null;
+});
 </script>
 
 <template>
@@ -49,7 +71,15 @@ function formatDate(value: string): string {
       </header>
 
       <p v-if="loading" class="empty">Loading file...</p>
-      <pre v-else class="content">{{ content }}</pre>
+      <MarkdownRender
+        v-else
+        class="content markdown"
+        :content="content ?? ''"
+        mode="chat"
+        :final="true"
+        :fade="false"
+        :is-dark="isDark"
+      />
 
       <footer v-if="links" class="link-summary">
         <span>{{ links.outgoing.length }} outgoing</span>
@@ -142,15 +172,31 @@ function formatDate(value: string): string {
 .content {
   min-height: 0;
   flex: 1;
-  margin: 0;
   overflow: auto;
   padding: 20px;
-  font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--foreground);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.content :deep(p, ul, ol, blockquote, pre, table) {
+  margin-bottom: 12px;
+}
+
+.content :deep(p:last-child, ul:last-child, ol:last-child, pre:last-child, table:last-child) {
+  margin-bottom: 0;
+}
+
+.content :deep(a) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.content :deep(code) {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
 }
 
 .link-summary {
