@@ -2,7 +2,7 @@
 import { authClient } from "~/lib/auth-client";
 
 const description =
-  "A library-grounded content agent that remembers what works and writes what's next.";
+  "A script-writing agent that grows with your library and writes what's next.";
 const requestUrl = useRequestURL();
 const canonicalUrl = `${requestUrl.origin}/`;
 const socialImageUrl = `${requestUrl.origin}/og.png`;
@@ -15,11 +15,11 @@ useHead({
 });
 
 useSeoMeta({
-  title: "OpenFranz | Content agent",
+  title: "OpenFranz | Script-writing agent",
   description,
   robots: "index, follow, max-image-preview:large",
   themeColor: "#0d0d0c",
-  ogTitle: "OpenFranz | Content agent",
+  ogTitle: "OpenFranz | Script-writing agent",
   ogDescription: description,
   ogType: "website",
   ogUrl: canonicalUrl,
@@ -32,7 +32,7 @@ useSeoMeta({
   ogImageHeight: 630,
   ogImageAlt: "OpenFranz logo and title on a dark dithered background",
   twitterCard: "summary_large_image",
-  twitterTitle: "OpenFranz | Content agent",
+  twitterTitle: "OpenFranz | Script-writing agent",
   twitterDescription: description,
   twitterImage: socialImageUrl,
   twitterImageAlt: "OpenFranz logo and title on a dark dithered background",
@@ -79,8 +79,8 @@ async function signInWithGoogle() {
       <div class="copy">
         <h1 id="landing-title">OpenFranz</h1>
         <p>
-          A library-grounded content agent that remembers what works and writes
-          what's next.
+          A script-writing agent that grows with your library and writes what's
+          next.
         </p>
       </div>
 
