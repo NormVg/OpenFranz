@@ -5,7 +5,6 @@ import {
   isSafeIngestPath,
   selectFrameTimes,
   validateIngestDocument,
-  wavDurationSeconds,
 } from "../shared/utils/ingest-pipeline.ts";
 
 test("selects speech-timed frames across the whole reel", () => {
@@ -110,14 +109,4 @@ test("rejects thin, unsourced, and placeholder documents", () => {
 
   const tooLong = `${groundedDocument}\n\n${"A".repeat(6_000)}`;
   assert.equal(validateIngestDocument(tooLong, sourceUrl).length > 0, true);
-});
-
-test("derives reel duration from the extracted WAV byte length", () => {
-  assert.equal(wavDurationSeconds(new ArrayBuffer(44 + 32_000)), 1);
-  assert.equal(wavDurationSeconds(new ArrayBuffer(44 + 96_000)), 3);
-});
-
-test("never returns a negative duration for a short WAV", () => {
-  assert.equal(wavDurationSeconds(new ArrayBuffer(0)), 0);
-  assert.equal(wavDurationSeconds(new ArrayBuffer(20)), 0);
 });

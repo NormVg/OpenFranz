@@ -19,7 +19,5 @@ services:
         sync: false
       - key: SARVAM_API_KEY
         sync: false
-      - key: RENDI_API_KEY
-        sync: false
       - key: INGEST_WORKER_SECRET
         sync: false

@@ -2,13 +2,9 @@ import type { IngestPipelineResult } from "../../shared/types/ingest-pipeline";
 import { runIngestionAgent } from "./ingest-agent.service";
 import { fetchInstagramMedia } from "./instagram.service";
 import {
-  analyzePostImages,
-  analyzeReelFrames,
-  extractReelAudio,
-  extractReelFrames,
   planPostImages,
-  planReelFrames,
-  transcribeReelAudio,
+  preparePostContext,
+  prepareReelContext,
 } from "./media-context.service";
 
 /**
@@ -24,24 +20,8 @@ export async function runIngestPipeline(
     const videoUrl = media.media[0]?.url;
     if (!videoUrl) throw new Error("No reel video was returned.");
 
-    const audioUrl = await extractReelAudio(videoUrl);
-    const { transcription, durationSeconds } =
-      await transcribeReelAudio(audioUrl);
-    const times = planReelFrames(transcription.segments, durationSeconds);
-    const frameUrls = await extractReelFrames(videoUrl, times);
-    const visualAnalysis = await analyzeReelFrames(
-      frameUrls,
-      transcription.transcript,
-    );
-
-    return runIngestionAgent({
-      sourceUrl,
-      mediaType: "reel",
-      transcript: transcription.transcript,
-      segments: transcription.segments,
-      visualAnalysis,
-      frameCount: frameUrls.length,
-    });
+    const context = await prepareReelContext(sourceUrl, videoUrl);
+    return runIngestionAgent(context);
   }
 
   const imageUrls = planPostImages(media);
@@ -49,14 +29,6 @@ export async function runIngestPipeline(
     throw new Error("No post images were returned.");
   }
 
-  const visualAnalysis = await analyzePostImages(imageUrls);
-
-  return runIngestionAgent({
-    sourceUrl,
-    mediaType: "post",
-    transcript: "",
-    segments: [],
-    visualAnalysis,
-    frameCount: imageUrls.length,
-  });
+  const context = await preparePostContext(sourceUrl, imageUrls);
+  return runIngestionAgent(context);
 }
