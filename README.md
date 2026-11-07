@@ -47,6 +47,8 @@ Most writing tools hand you a blank page and a generic model. OpenFranz keeps th
 - Eve agent runtime
 - Better Auth with Google sign-in
 - Drizzle ORM and Neon PostgreSQL
+- Native ffmpeg through `ffmpeg-static` in the ingest worker
+- Sarvam for reel transcription
 - @paper-design/shaders for the dithered landing and empty-state backgrounds
 - force-graph for the knowledge graph
 
@@ -65,6 +67,8 @@ Most writing tools hand you a blank page and a generic model. OpenFranz keeps th
 - pnpm
 - A Neon PostgreSQL database
 - A Google OAuth web client
+- A Sarvam API key for reel transcription
+- A Render account for the ingest worker, optional for local development
 
 ### Setup
 
@@ -85,6 +89,7 @@ BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
 OLLAMA_API_KEY=
 OLLAMA_BASE_URL=https://ollama.com
+SARVAM_API_KEY=
 ```
 
 Add this authorized redirect URI to the Google OAuth client:
@@ -124,10 +129,53 @@ Routes:
 - `/` - landing page with Google sign-in
 - `/app` - authenticated workspace
 
+### Ingest worker
+
+Ingest runs outside the web app so a long reel does not depend on a request
+staying open. The worker polls the `ingest_jobs` table, processes one job at a
+time, and writes the result back to Postgres.
+
+Run it locally:
+
+```bash
+pnpm exec tsx worker/ingest-worker.ts
+```
+
+The worker listens on `PORT` (default `10000`) and exposes:
+
+- `GET /health` - liveness check
+- `POST /wake` - drains the queue; requires `INGEST_WORKER_SECRET`
+
+The web app wakes the worker when a job is queued. Because a free Render
+instance can sleep, the ingest view retries the wake every 25 seconds while a
+job is still queued.
+
+Set these on the web app to enable the wake call:
+
+```dotenv
+INGEST_WORKER_URL=
+INGEST_WORKER_SECRET=
+```
+
+### Deployment
+
+The app runs in two places:
+
+- **Vercel** hosts the Nuxt app and the eve agent service.
+- **Render** hosts the ingest worker described by `render.yaml`.
+
+The queue lives in Postgres, so the worker can sleep, restart, or redeploy
+without losing a job. The worker uses native ffmpeg through `ffmpeg-static` and
+`ffprobe-static`, so no media service is required.
+
+For the full app on Render, `start.sh` runs the eve agent on
+`127.0.0.1:4274` and the Nuxt server on `PORT`.
+
 ### Verification
 
 ```bash
 pnpm test
 pnpm exec nuxt typecheck
 pnpm build
+pnpm exec eve build --skip-sandbox-prewarm
 ```
