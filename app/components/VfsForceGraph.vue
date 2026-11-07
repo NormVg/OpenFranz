@@ -57,6 +57,9 @@ let graph: ForceGraph<GraphNode, GraphLink> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let themeObserver: MutationObserver | null = null;
 let hasSettled = false;
+let fitTicks = 0;
+
+const FIT_TICKS = 90;
 
 const degreeMap = computed(() => {
   const map = new Map<string, number>();
@@ -149,6 +152,7 @@ function syncData() {
   if (!graph) return;
 
   hasSettled = false;
+  fitTicks = 0;
   const degree = degreeMap.value;
   const nameCounts = new Map<string, number>();
   for (const entry of props.nodes) {
@@ -318,13 +322,18 @@ async function mountGraph() {
       node.fy = node.y;
     })
     .onBackgroundClick(() => emit("clear"))
+    .onEngineTick(() => {
+      if (hasSettled || fitTicks >= FIT_TICKS) return;
+      fitTicks += 1;
+      graph?.zoomToFit(0, 80);
+    })
     .onEngineStop(() => {
       if (hasSettled) return;
       hasSettled = true;
       graph?.zoomToFit(450, 80);
     })
     .cooldownTicks(180)
-    .warmupTicks(20)
+    .warmupTicks(120)
     .d3AlphaDecay(0.03)
     .d3VelocityDecay(0.32)
     .minZoom(0.15)
@@ -336,6 +345,8 @@ async function mountGraph() {
 
   resize();
   syncData();
+  // Warm the layout up before the first paint so the initial fit sees a
+  // spread-out graph instead of the compact starting cluster.
   graph.zoomToFit(0, 80);
 }
 
