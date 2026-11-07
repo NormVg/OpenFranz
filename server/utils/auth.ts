@@ -12,7 +12,10 @@ function createAuth() {
   }
 
   return betterAuth({
-    baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    baseURL:
+      process.env.BETTER_AUTH_URL ??
+      process.env.RENDER_EXTERNAL_URL ??
+      "http://localhost:3000",
     secret: process.env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(getDatabase(), {
       provider: "pg",
