@@ -232,11 +232,24 @@ export async function runIngestionAgent(
       const args = parseArguments(call);
 
       if (name === "finish") {
+        if (documents.size === 0) {
+          messages.push({
+            role: "tool",
+            tool_call_id: call.id,
+            name,
+            content: JSON.stringify({
+              error:
+                "No document was written. Call fs_write with a complete document before finish.",
+            }),
+          });
+          continue;
+        }
+
         const summary = typeof args.summary === "string" ? args.summary : finalSummary;
         return {
           summary,
           documents: [...documents.values()],
-          skipped: documents.size === 0,
+          skipped: false,
           mediaType: context.mediaType,
           transcriptCharacters: context.transcript.length,
           framesAnalyzed: context.frameCount,
