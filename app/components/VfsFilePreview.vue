@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { XIcon } from "lucide-vue-next";
 import type { VfsEntry, VfsLinkInfo } from "~~/shared/types/vfs";
 
 defineProps<{
@@ -9,6 +10,10 @@ defineProps<{
     backlinks: VfsLinkInfo[];
   } | null;
   loading?: boolean;
+}>();
+
+const emit = defineEmits<{
+  close: [];
 }>();
 
 function formatDate(value: string): string {
@@ -27,9 +32,20 @@ function formatDate(value: string): string {
           <h2>{{ file.name }}</h2>
           <p>{{ file.path }}</p>
         </div>
-        <span class="preview-meta">
-          {{ file.size }} B · {{ formatDate(file.updatedAt) }}
-        </span>
+        <div class="preview-actions">
+          <span class="preview-meta">
+            {{ file.size }} B · {{ formatDate(file.updatedAt) }}
+          </span>
+          <button
+            class="close-button"
+            type="button"
+            aria-label="Close preview"
+            title="Close preview"
+            @click="emit('close')"
+          >
+            <XIcon class="close-icon" />
+          </button>
+        </div>
       </header>
 
       <p v-if="loading" class="empty">Loading file...</p>
@@ -60,6 +76,38 @@ function formatDate(value: string): string {
   gap: 16px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
+}
+
+.preview-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-button {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.close-button:hover {
+  background: color-mix(in oklab, var(--muted) 55%, transparent);
+  color: var(--foreground);
+}
+
+.close-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .preview-title {

@@ -68,6 +68,8 @@ The root contains exactly two folders:
 
 Each folder has a `README.md` describing its scope. The filesystem supports fuzzy path search, outgoing links, backlinks, related-node discovery, shortest link paths, and a full knowledge graph.
 
+The distinction is practical: Arsenal is for material a writer can reuse directly, such as a hook, CTA, framework, or editing move. Knowledge is for ideas that improve judgment, such as why a curiosity loop works or how an audience makes a decision.
+
 ### Brands
 
 Brands store product-specific facts used during writing:

@@ -14,7 +14,8 @@ const execFileAsync = promisify(execFile);
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES = 12;
-const MAX_FRAMES = 12;
+const MAX_FRAMES = 24;
+const SCENE_THRESHOLD = 0.08;
 
 async function downloadToFile(
   url: string,
@@ -82,6 +83,35 @@ async function extractAudio(videoPath: string, audioPath: string): Promise<void>
     "wav",
     audioPath,
   ]);
+}
+
+/**
+ * Best-effort visual cut detection. Scene detection is an optimisation, so a
+ * failure here must never fail the ingestion.
+ */
+async function detectSceneTimes(videoPath: string): Promise<number[]> {
+  try {
+    const { stderr } = await execFileAsync(
+      "ffmpeg",
+      [
+        "-hide_banner",
+        "-i",
+        videoPath,
+        "-filter:v",
+        `select='gt(scene,${SCENE_THRESHOLD})',showinfo`,
+        "-f",
+        "null",
+        "-",
+      ],
+      { maxBuffer: 32 * 1024 * 1024 },
+    );
+
+    return [...stderr.matchAll(/pts_time:([0-9.]+)/g)]
+      .map((match) => Number(match[1]))
+      .filter((time) => Number.isFinite(time) && time > 0.2);
+  } catch {
+    return [];
+  }
 }
 
 async function extractFrames(
@@ -158,12 +188,16 @@ export async function prepareInstagramContext(
 
       const duration = await probeDuration(videoPath);
       const audioPath = join(directory, "audio.wav");
-      await extractAudio(videoPath, audioPath);
+      const [sceneTimes] = await Promise.all([
+        detectSceneTimes(videoPath),
+        extractAudio(videoPath, audioPath),
+      ]);
       const transcription = await transcribeAudio(audioPath, duration);
       const times = selectFrameTimes(
         transcription.segments,
         duration,
         MAX_FRAMES,
+        sceneTimes,
       );
       const framePaths = await extractFrames(videoPath, directory, times);
       const visualAnalysis = await analyzeImages({

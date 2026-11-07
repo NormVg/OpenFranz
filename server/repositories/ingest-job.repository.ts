@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type {
   IngestJobRecord,
   IngestPipelineResult,
@@ -109,7 +109,7 @@ export async function listRecent(limit = 20): Promise<IngestJobRecord[]> {
   const rows = await getDatabase()
     .select()
     .from(ingestJobs)
-    .orderBy(asc(ingestJobs.createdAt))
+    .orderBy(desc(ingestJobs.createdAt))
     .limit(limit);
 
   return rows.map(toRecord);

@@ -4,6 +4,7 @@ import type {
   PreparedMediaContext,
 } from "../../shared/types/ingest-pipeline";
 import { isSafeIngestPath } from "../../shared/utils/ingest-pipeline";
+import { extractVfsLinks, resolveVfsLink } from "../../shared/utils/vfs-links";
 import { vfs } from "./vfs.service";
 import {
   ollamaChat,
@@ -125,7 +126,10 @@ Rules:
 - Write between zero and three Markdown documents. Skip the source entirely when it has no distinctive, reusable value.
 - Prefer improving an existing document over creating a near-duplicate. Create a new document only when it adds something clearly useful.
 - Every document must have a clear title and a source line containing the original Instagram URL.
+- Every link must point to a file that already exists. Verify with fs_read or fs_search before linking. Never link to a file you have not confirmed exists.
 - Extract hooks, phrases, frameworks, techniques, and concepts only when they are genuinely good. Do not force every category.
+- Do not include generic advice, filler, or broad summaries. Every section must be specific to the source.
+- Prefer one focused document over a broad overview. Do not write sample copy unless the source demonstrates it; label any adaptation clearly.
 - Do not save a raw transcript or a visual description unless it is useful reference material by itself.
 - Use Markdown links to related files when that improves recall.
 - Call finish exactly once when done. Set skipped=true only when no document was written.`;
@@ -230,6 +234,20 @@ export async function runIngestionAgent(
           if (content.length > 20_000) {
             throw new Error("The document is too long.");
           }
+
+          const missing: string[] = [];
+          for (const reference of extractVfsLinks(content)) {
+            const target = resolveVfsLink(path, reference.target);
+            if (!target) continue;
+            const existingTarget = await vfs.stat(target);
+            if (!existingTarget) missing.push(target);
+          }
+          if (missing.length > 0) {
+            throw new Error(
+              `Links target missing files: ${missing.join(", ")}. Remove or fix them before writing.`,
+            );
+          }
+
           const existing = await vfs.stat(path);
           await vfs.writeFile(path, content);
           documents.set(path, {

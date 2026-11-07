@@ -24,7 +24,9 @@ const visibleEntries = computed(() =>
   searchQuery.value.trim() ? searchResults.value : entries.value,
 );
 
-async function load(path: string) {
+async function load(path: string, options: { fresh?: boolean } = {}) {
+  if (options.fresh) vfsService.invalidate();
+
   loading.value = true;
   error.value = null;
 
@@ -67,6 +69,12 @@ async function open(entry: VfsEntry) {
   } finally {
     previewLoading.value = false;
   }
+}
+
+function closePreview() {
+  selectedFile.value = null;
+  content.value = "";
+  links.value = null;
 }
 
 function onSearchInput() {
@@ -119,7 +127,7 @@ onBeforeUnmount(() => {
           type="button"
           aria-label="Refresh files"
           title="Refresh files"
-          @click="load(currentPath)"
+          @click="load(currentPath, { fresh: true })"
         >
           <RefreshCwIcon class="refresh-icon" />
         </button>
@@ -144,6 +152,7 @@ onBeforeUnmount(() => {
         :content="content"
         :links="links"
         :loading="previewLoading"
+        @close="closePreview"
       />
     </div>
   </section>

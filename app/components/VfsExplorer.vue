@@ -39,7 +39,7 @@ const view = ref<"files" | "graph">("files");
     </header>
 
     <VfsFileBrowser v-if="view === 'files'" />
-    <VfsGraphView v-else />
+    <LazyVfsGraphView v-else />
   </section>
 </template>
 

@@ -1,31 +1,47 @@
 import type { BrandInput, BrandRecord } from "~~/shared/types/brand";
+import {
+  cachedResponse,
+  invalidateResponseCache,
+} from "~/utils/response-cache";
+
+const BRAND_TTL_MS = 15_000;
 
 export const brandService = {
   list(): Promise<BrandRecord[]> {
-    return $fetch<BrandRecord[]>("/api/brands");
+    return cachedResponse("brands:list", BRAND_TTL_MS, () =>
+      $fetch<BrandRecord[]>("/api/brands"),
+    );
   },
 
   get(idOrSlug: string): Promise<BrandRecord> {
-    return $fetch<BrandRecord>(`/api/brands/${encodeURIComponent(idOrSlug)}`);
+    return cachedResponse(`brands:item:${idOrSlug}`, BRAND_TTL_MS, () =>
+      $fetch<BrandRecord>(`/api/brands/${encodeURIComponent(idOrSlug)}`),
+    );
   },
 
-  create(input: BrandInput): Promise<BrandRecord> {
-    return $fetch<BrandRecord>("/api/brands", {
+  async create(input: BrandInput): Promise<BrandRecord> {
+    const brand = await $fetch<BrandRecord>("/api/brands", {
       method: "POST",
       body: input,
     });
+    invalidateResponseCache("brands:");
+    return brand;
   },
 
-  update(id: string, input: Partial<BrandInput>): Promise<BrandRecord> {
-    return $fetch<BrandRecord>(`/api/brands/${id}`, {
+  async update(id: string, input: Partial<BrandInput>): Promise<BrandRecord> {
+    const brand = await $fetch<BrandRecord>(`/api/brands/${id}`, {
       method: "PATCH",
       body: input,
     });
+    invalidateResponseCache("brands:");
+    return brand;
   },
 
-  remove(id: string): Promise<{ ok: boolean }> {
-    return $fetch<{ ok: boolean }>(`/api/brands/${id}`, {
+  async remove(id: string): Promise<{ ok: boolean }> {
+    const result = await $fetch<{ ok: boolean }>(`/api/brands/${id}`, {
       method: "DELETE",
     });
+    invalidateResponseCache("brands:");
+    return result;
   },
 };

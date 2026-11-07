@@ -7,7 +7,7 @@ import type {
 } from "~~/shared/types/vfs";
 import { vfsService } from "~/services/vfs.service";
 
-const graph = ref<VfsGraph | null>(null);
+const graph = shallowRef<VfsGraph | null>(null);
 const selectedFile = ref<VfsEntry | null>(null);
 const content = ref("");
 const links = ref<{
@@ -34,32 +34,6 @@ const edges = computed(() =>
   ),
 );
 
-const positions = computed(() => {
-  const nodes = fileNodes.value;
-  const centerX = 450;
-  const centerY = 280;
-  const radius = nodes.length <= 1 ? 0 : Math.min(220, 90 + nodes.length * 10);
-  const result = new Map<string, { x: number; y: number }>();
-
-  nodes.forEach((node, index) => {
-    const angle =
-      nodes.length === 1
-        ? 0
-        : (index / nodes.length) * Math.PI * 2 - Math.PI / 2;
-    result.set(node.path, {
-      x: centerX + Math.cos(angle) * radius,
-      y: centerY + Math.sin(angle) * radius,
-    });
-  });
-
-  return result;
-});
-
-function shortLabel(path: string): string {
-  const name = path.slice(path.lastIndexOf("/") + 1);
-  return name.length > 18 ? `${name.slice(0, 16)}...` : name;
-}
-
 async function loadGraph() {
   loading.value = true;
   error.value = null;
@@ -70,9 +44,7 @@ async function loadGraph() {
       selectedFile.value &&
       !fileNodes.value.some((node) => node.path === selectedFile.value?.path)
     ) {
-      selectedFile.value = null;
-      content.value = "";
-      links.value = null;
+      closePreview();
     }
   } catch {
     error.value = "Unable to load the knowledge graph. Please try again.";
@@ -81,7 +53,16 @@ async function loadGraph() {
   }
 }
 
-async function selectNode(node: VfsEntry) {
+function closePreview() {
+  selectedFile.value = null;
+  content.value = "";
+  links.value = null;
+}
+
+async function selectNode(path: string) {
+  const node = nodeMap.value.get(path);
+  if (!node) return;
+
   selectedFile.value = node;
   previewLoading.value = true;
   error.value = null;
@@ -145,71 +126,25 @@ onMounted(loadGraph);
       links first.
     </p>
 
-    <template v-else>
-      <div class="graph-canvas">
-        <svg
-          viewBox="0 0 900 560"
-          role="img"
-          aria-label="Knowledge graph of files and references"
-        >
-          <defs>
-            <marker
-              id="vfs-arrow"
-              viewBox="0 0 6 6"
-              refX="5"
-              refY="3"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto"
-            >
-              <path d="M0,0 L0,6 L6,3 Z" fill="currentColor" />
-            </marker>
-          </defs>
-
-          <line
-            v-for="(edge, index) in edges"
-            :key="`${edge.sourcePath}-${edge.targetPath}-${index}`"
-            class="edge"
-            :x1="positions.get(edge.sourcePath)?.x ?? 0"
-            :y1="positions.get(edge.sourcePath)?.y ?? 0"
-            :x2="positions.get(edge.targetPath)?.x ?? 0"
-            :y2="positions.get(edge.targetPath)?.y ?? 0"
-            marker-end="url(#vfs-arrow)"
-          />
-
-          <g
-            v-for="node in fileNodes"
-            :key="node.path"
-            class="node"
-            :class="{ selected: selectedFile?.path === node.path }"
-            role="button"
-            tabindex="0"
-            @click="selectNode(node)"
-            @keydown.enter="selectNode(node)"
-          >
-            <circle
-              :cx="positions.get(node.path)?.x ?? 0"
-              :cy="positions.get(node.path)?.y ?? 0"
-              :r="selectedFile?.path === node.path ? 8 : 6"
-            />
-            <text
-              :x="positions.get(node.path)?.x ?? 0"
-              :y="(positions.get(node.path)?.y ?? 0) + 20"
-              text-anchor="middle"
-            >
-              {{ shortLabel(node.path) }}
-            </text>
-          </g>
-        </svg>
-      </div>
-
-      <VfsFilePreview
-        :file="selectedFile"
-        :content="content"
-        :links="links"
-        :loading="previewLoading"
+    <div v-else class="graph-body">
+      <VfsForceGraph
+        :nodes="fileNodes"
+        :edges="edges"
+        :selected-path="selectedFile?.path ?? null"
+        @select="selectNode"
+        @clear="closePreview"
       />
-    </template>
+
+      <aside v-if="selectedFile" class="graph-panel">
+        <VfsFilePreview
+          :file="selectedFile"
+          :content="content"
+          :links="links"
+          :loading="previewLoading"
+          @close="closePreview"
+        />
+      </aside>
+    </div>
   </section>
 </template>
 
@@ -278,55 +213,25 @@ onMounted(loadGraph);
   height: 13px;
 }
 
-.graph-canvas {
-  min-height: 240px;
+.graph-body {
+  display: flex;
+  min-height: 0;
   flex: 1;
-  overflow: hidden;
-  color: var(--muted-foreground);
 }
 
-.graph-canvas svg {
-  display: block;
-  width: 100%;
-  height: 100%;
+.graph-panel {
+  display: flex;
+  width: 380px;
+  min-height: 0;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--card);
 }
 
-.edge {
-  stroke: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
-  stroke-width: 1;
-}
-
-.node {
-  cursor: pointer;
-  outline: none;
-}
-
-.node circle {
-  fill: var(--foreground);
-  transition: fill 150ms ease-out;
-}
-
-.node.selected circle {
-  fill: #fbf3db;
-}
-
-.node text {
-  fill: var(--muted-foreground);
-  font-family:
-    "SF Mono",
-    "JetBrains Mono",
-    monospace;
-  font-size: 10px;
-}
-
-.node:hover text,
-.node.selected text {
-  fill: var(--foreground);
-}
-
-.node:focus-visible circle {
-  stroke: var(--foreground);
-  stroke-width: 2;
+.graph-panel :deep(.preview) {
+  min-height: 0;
+  flex: 1;
 }
 
 .empty {
@@ -354,6 +259,25 @@ onMounted(loadGraph);
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .graph-panel {
+    width: 320px;
+  }
+}
+
+@media (max-width: 760px) {
+  .graph-body {
+    flex-direction: column;
+  }
+
+  .graph-panel {
+    width: auto;
+    height: 45%;
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 }
 

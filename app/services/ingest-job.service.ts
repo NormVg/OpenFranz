@@ -1,14 +1,31 @@
 import type { IngestJobRecord } from "~~/shared/types/ingest-pipeline";
+import {
+  cachedResponse,
+  invalidateResponseCache,
+} from "~/utils/response-cache";
+
+const LIST_TTL_MS = 2_000;
+const JOB_TTL_MS = 1_000;
 
 export const ingestJobService = {
-  enqueueInstagram(url: string): Promise<IngestJobRecord> {
-    return $fetch<IngestJobRecord>("/api/ingest/instagram", {
+  list(): Promise<IngestJobRecord[]> {
+    return cachedResponse("ingest:jobs", LIST_TTL_MS, () =>
+      $fetch<IngestJobRecord[]>("/api/ingest/jobs"),
+    );
+  },
+
+  async enqueueInstagram(url: string): Promise<IngestJobRecord> {
+    const job = await $fetch<IngestJobRecord>("/api/ingest/instagram", {
       method: "POST",
       body: { url },
     });
+    invalidateResponseCache("ingest:");
+    return job;
   },
 
   get(id: string): Promise<IngestJobRecord> {
-    return $fetch<IngestJobRecord>(`/api/ingest/jobs/${id}`);
+    return cachedResponse(`ingest:job:${id}`, JOB_TTL_MS, () =>
+      $fetch<IngestJobRecord>(`/api/ingest/jobs/${id}`),
+    );
   },
 };

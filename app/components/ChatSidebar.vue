@@ -288,114 +288,34 @@ const initials = computed(() => {
 
 .new-session {
   display: flex;
-  height: 32px;
+  height: 34px;
   align-items: center;
   gap: 8px;
   margin: 4px 8px 8px;
-  padding: 0 8px;
-  border: 1px solid #8b8f97;
+  padding: 0 10px;
+  border: 0;
   border-radius: 6px;
-  background:
-    linear-gradient(
-      112deg,
-      transparent 0%,
-      transparent 34%,
-      rgb(255 255 255 / 0.55) 44%,
-      rgb(255 255 255 / 0.18) 51%,
-      transparent 60%,
-      transparent 100%
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgb(255 255 255 / 0.05) 0px,
-      rgb(255 255 255 / 0.05) 1px,
-      rgb(0 0 0 / 0.035) 1px,
-      rgb(0 0 0 / 0.035) 2px
-    ),
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #eceef2 14%,
-      #cfd2d9 32%,
-      #a9adb6 48%,
-      #c2c5cd 54%,
-      #e8eaee 72%,
-      #f7f8fa 84%,
-      #b4b8c0 100%
-    );
-  color: #101116;
-  font-size: 14px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.01em;
   text-align: left;
-  text-shadow: 0 1px 0 rgb(255 255 255 / 0.7);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.9) inset,
-    0 -1px 0 rgb(0 0 0 / 0.28) inset,
-    0 1px 2px rgb(0 0 0 / 0.4);
   transition:
-    box-shadow 180ms ease-out,
-    filter 150ms ease-out,
+    opacity 150ms ease-out,
     transform 150ms ease-out;
 }
 
 .new-session:hover,
 .new-session.active {
-  background:
-    linear-gradient(
-      112deg,
-      transparent 0%,
-      transparent 30%,
-      rgb(255 255 255 / 0.75) 42%,
-      rgb(255 255 255 / 0.25) 50%,
-      transparent 60%,
-      transparent 100%
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgb(255 255 255 / 0.06) 0px,
-      rgb(255 255 255 / 0.06) 1px,
-      rgb(0 0 0 / 0.03) 1px,
-      rgb(0 0 0 / 0.03) 2px
-    ),
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #f4f5f8 14%,
-      #dde0e5 32%,
-      #b8bcc4 48%,
-      #d2d5db 54%,
-      #f2f4f7 72%,
-      #ffffff 84%,
-      #c3c7cf 100%
-    );
-  color: #0b0c0f;
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 1) inset,
-    0 -1px 0 rgb(0 0 0 / 0.3) inset,
-    0 2px 4px rgb(0 0 0 / 0.35),
-    0 10px 26px rgb(190 200 216 / 0.28),
-    0 0 34px rgb(200 210 228 / 0.24);
+  opacity: 0.88;
 }
 
 .new-session:active {
   transform: translateY(1px);
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgb(255 255 255 / 0.04) 0px,
-      rgb(255 255 255 / 0.04) 1px,
-      rgb(0 0 0 / 0.04) 1px,
-      rgb(0 0 0 / 0.04) 2px
-    ),
-    linear-gradient(180deg, #a8acb5 0%, #c3c6ce 45%, #9ea2ab 100%);
-  box-shadow:
-    0 2px 5px rgb(0 0 0 / 0.35) inset,
-    0 -1px 0 rgb(255 255 255 / 0.35) inset;
 }
 
 .new-session:focus-visible {
-  outline: 2px solid rgb(255 255 255 / 0.7);
+  outline: 2px solid var(--foreground);
   outline-offset: 2px;
 }
 

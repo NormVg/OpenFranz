@@ -166,10 +166,13 @@ async function removeChat(id: string) {
         @toggle-theme="toggleTheme"
       />
 
-      <VfsExplorer v-if="activeView === 'files'" />
-      <BrandsExplorer v-else-if="activeView === 'brands'" />
-      <IngestExplorer v-else-if="activeView === 'ingest'" />
-      <template v-else>
+      <KeepAlive>
+        <LazyVfsExplorer v-if="activeView === 'files'" />
+        <LazyBrandsExplorer v-else-if="activeView === 'brands'" />
+        <LazyIngestExplorer v-else-if="activeView === 'ingest'" />
+      </KeepAlive>
+
+      <template v-if="activeView === 'chat'">
         <p v-if="chatStore.error" class="error" role="alert">{{ chatStore.error }}</p>
 
         <div v-if="chatStore.loading" class="loading">Loading chats...</div>

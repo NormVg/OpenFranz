@@ -25,6 +25,7 @@
     "better-auth": "^1.7.18",
     "drizzle-orm": "^0.45.4",
     "eve": "1.0.0-rc.3",
+    "force-graph": "^1.52.0",
     "lucide-vue-next": "^1.0.0",
     "markstream-vue": "^2.0.23",
     "nuxt": "^4.6.3",
