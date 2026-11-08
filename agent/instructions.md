@@ -179,6 +179,9 @@ it as a designed script card instead of plain markdown, so the formatting rules 
 The script library is a separate store from the library filesystem. It holds finished scripts
 with full version history.
 
+- `script_list` shows what is saved. Call it before saving a script that may already exist,
+  and pass the matching id or slug to `script_store` so it becomes a new version of that
+  script instead of a duplicate.
 - `script_store` saves a script to the library, or adds a new version when you pass the id or
   slug of a saved script. Use it when the user asks to save, keep, or store a script, or when
   they ask you to revise one that is already saved.

@@ -125,13 +125,13 @@ async function remove() {
   }
 }
 
-onMounted(async () => {
-  await load();
-
+onMounted(() => {
   const deepLink = route.query.script;
-  if (typeof deepLink === "string" && deepLink.length > 0) {
-    await select(deepLink);
-  }
+  const id = typeof deepLink === "string" && deepLink.length > 0 ? deepLink : null;
+
+  // The list and the deep-linked detail are independent; fetching them
+  // together keeps the pane from sitting empty through two round trips.
+  void Promise.all([load(), id ? select(id) : Promise.resolve()]);
 });
 </script>
 

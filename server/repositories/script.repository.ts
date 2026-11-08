@@ -27,50 +27,39 @@ export type ScriptVersionValues = {
 };
 
 export async function listAll(): Promise<ScriptRecord[]> {
-  const rows = await getDatabase()
-    .select({
-      script: scripts,
-      versionCount:
-        sql<number>`(select count(*)::int from ${scriptVersions} where ${scriptVersions.scriptId} = ${scripts.id})`.as(
-          "version_count",
-        ),
-    })
-    .from(scripts)
-    .orderBy(desc(scripts.updatedAt));
-
+  const rows = await withVersionCount().orderBy(desc(scripts.updatedAt));
   return rows.map((row) => toScriptRecord(row.script, row.versionCount));
 }
 
 export async function findById(id: string): Promise<ScriptRecord | null> {
-  const [row] = await getDatabase()
-    .select({
-      script: scripts,
-      versionCount:
-        sql<number>`(select count(*)::int from ${scriptVersions} where ${scriptVersions.scriptId} = ${scripts.id})`.as(
-          "version_count",
-        ),
-    })
-    .from(scripts)
-    .where(eq(scripts.id, id))
-    .limit(1);
-
+  const [row] = await withVersionCount().where(eq(scripts.id, id)).limit(1);
   return row ? toScriptRecord(row.script, row.versionCount) : null;
 }
 
 export async function findBySlug(slug: string): Promise<ScriptRecord | null> {
-  const [row] = await getDatabase()
-    .select({
-      script: scripts,
-      versionCount:
-        sql<number>`(select count(*)::int from ${scriptVersions} where ${scriptVersions.scriptId} = ${scripts.id})`.as(
-          "version_count",
-        ),
-    })
-    .from(scripts)
+  const [row] = await withVersionCount()
     .where(eq(scripts.slug, slug))
     .limit(1);
-
   return row ? toScriptRecord(row.script, row.versionCount) : null;
+}
+
+/**
+ * Groups scripts with their version count. The count lives in a join, not a
+ * correlated subquery: drizzle renders interpolated columns inside a
+ * select-field subquery without table qualification, which silently
+ * rebinds the correlation to the version table itself.
+ */
+function withVersionCount() {
+  return getDatabase()
+    .select({
+      script: scripts,
+      versionCount: sql<number>`count(${scriptVersions.id})::int`.as(
+        "version_count",
+      ),
+    })
+    .from(scripts)
+    .leftJoin(scriptVersions, eq(scriptVersions.scriptId, scripts.id))
+    .groupBy(scripts.id);
 }
 
 export async function listSlugs(): Promise<string[]> {

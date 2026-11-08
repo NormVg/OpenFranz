@@ -5,7 +5,7 @@ import { runTool } from "../lib/tool-result";
 
 export default defineTool({
   description:
-    "Save a script to the shared script library, or add a new version to a script already saved there. Call this when the user asks to save, keep, or store a script you just wrote, or when they ask you to revise a saved script. Never claim a script was saved without calling this.",
+    "Save a script to the shared script library, or add a new version to a script already saved there. Call this when the user asks to save, keep, or store a script you just wrote, or when they ask you to revise a saved script. To update an existing script, pass its id or slug; call script_list first to find it. Never claim a script was saved without calling this.",
   inputSchema: z.object({
     idOrSlug: z
       .string()
