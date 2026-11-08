@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {
+  CalendarDaysIcon,
+  ClapperboardIcon,
   FolderIcon,
   InboxIcon,
   LogOutIcon,
@@ -17,7 +19,13 @@ const props = withDefaults(
     activeChatId: string | null;
     collapsed: boolean;
     showToggle?: boolean;
-    activeView?: "chat" | "files" | "brands" | "ingest";
+    activeView?:
+      | "chat"
+      | "files"
+      | "brands"
+      | "ingest"
+      | "scripts"
+      | "planner";
     user?: {
       name: string;
       email: string;
@@ -75,6 +83,22 @@ const initials = computed(() => {
       >
         <MessageSquareIcon class="icon" />
         Chat
+      </NuxtLink>
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'scripts' }"
+        to="/app?view=scripts"
+      >
+        <ClapperboardIcon class="icon" />
+        Scripts
+      </NuxtLink>
+      <NuxtLink
+        class="view-link"
+        :class="{ active: activeView === 'planner' }"
+        to="/app?view=planner"
+      >
+        <CalendarDaysIcon class="icon" />
+        Planner
       </NuxtLink>
       <NuxtLink
         class="view-link"
