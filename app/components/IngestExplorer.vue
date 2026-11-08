@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { InstagramIcon, Loader2Icon, RefreshCwIcon } from "lucide-vue-next";
+import { MarkdownRender } from "markstream-vue";
 import type { IngestJobRecord } from "~~/shared/types/ingest-pipeline";
 import { ingestJobService } from "~/services/ingest-job.service";
 
@@ -8,6 +9,7 @@ const jobs = shallowRef<IngestJobRecord[]>([]);
 const loading = ref(true);
 const submitting = ref(false);
 const error = ref<string | null>(null);
+const isDark = useIsDark();
 
 const WAKE_INTERVAL_MS = 25_000;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -194,7 +196,12 @@ onBeforeUnmount(stopPolling);
           </p>
 
           <template v-else-if="job.result">
-            <p class="job-summary">{{ job.result.summary }}</p>
+            <MarkdownRender
+              class="job-summary"
+              :content="job.result.summary"
+              mode="chat"
+              :is-dark="isDark"
+            />
             <p class="job-meta">
               {{ job.result.mediaType }} · {{ job.result.framesAnalyzed }} frames ·
               {{ job.result.transcriptCharacters }} transcript characters
@@ -450,8 +457,28 @@ onBeforeUnmount(stopPolling);
 }
 
 .job-summary {
-  font-size: 12px;
-  line-height: 1.55;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.job-summary :where(p, ul, ol, blockquote, pre, table) {
+  margin-block: 0 8px;
+}
+
+.job-summary :where(p:last-child, ul:last-child, ol:last-child, pre:last-child, table:last-child) {
+  margin-bottom: 0;
+}
+
+.job-summary :where(a) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+}
+
+.job-summary :where(code) {
+  font-size: 0.92em;
 }
 
 .job-error {

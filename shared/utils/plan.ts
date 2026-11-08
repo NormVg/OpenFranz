@@ -114,3 +114,40 @@ export function groupPlannerItems<T extends { plannedDate: string }>(
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+export type PlannerMonthCell = {
+  iso: string;
+  day: number;
+  inMonth: boolean;
+};
+
+/**
+ * Builds a Monday-first month grid for the calendar view: whole weeks only,
+ * always six rows so the grid height never jumps while paging months. Days
+ * before and after the anchor month stay in the grid, flagged `inMonth:
+ * false`, so every cell remains a valid drop target for a planned date.
+ */
+export function buildPlannerMonth(anchor: Date): PlannerMonthCell[] {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const first = new Date(year, month, 1);
+  const daysSinceMonday = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - daysSinceMonday);
+  const cells: PlannerMonthCell[] = [];
+
+  for (let offset = 0; offset < 42; offset += 1) {
+    const date = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate() + offset,
+    );
+
+    cells.push({
+      iso: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      day: date.getDate(),
+      inMonth: date.getMonth() === month && date.getFullYear() === year,
+    });
+  }
+
+  return cells;
+}

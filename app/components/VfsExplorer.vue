@@ -8,11 +8,11 @@ const view = ref<"files" | "graph">("files");
   <section class="explorer">
     <header class="explorer-header">
       <div class="explorer-copy">
-        <h1>Workspace files</h1>
-        <p>Browse text files and the references between them.</p>
+        <h1>Knowledgebase</h1>
+        <p>The shared library the agent reads and writes: arsenal and knowledge.</p>
       </div>
 
-      <div class="view-switch" role="tablist" aria-label="Filesystem view">
+      <div class="view-switch" role="tablist" aria-label="Knowledgebase view">
         <button
           class="view-button"
           :class="{ active: view === 'files' }"
@@ -22,7 +22,7 @@ const view = ref<"files" | "graph">("files");
           @click="view = 'files'"
         >
           <FolderIcon class="view-icon" />
-          Files
+          Browse
         </button>
         <button
           class="view-button"

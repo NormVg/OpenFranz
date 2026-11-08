@@ -11,6 +11,7 @@ import {
 
 const props = defineProps<{
   item?: PlannerItemRecord | null;
+  defaultDate?: string;
   scripts: ScriptRecord[];
   saving: boolean;
 }>();
@@ -29,7 +30,9 @@ const title = ref(props.item?.title ?? "");
 const platform = ref<string>(props.item?.platform ?? "instagram");
 const format = ref(props.item?.format ?? "");
 const brand = ref(props.item?.brand ?? "");
-const plannedDate = ref(props.item?.plannedDate ?? todayIso());
+const plannedDate = ref(
+  props.item?.plannedDate ?? props.defaultDate ?? todayIso(),
+);
 const plannedTime = ref(props.item?.plannedTime ?? "");
 const status = ref<string>(props.item?.status ?? "planned");
 const rationale = ref(props.item?.rationale ?? "");

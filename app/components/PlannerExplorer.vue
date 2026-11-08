@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PlusIcon } from "lucide-vue-next";
+import { CalendarDaysIcon, LayoutListIcon, PlusIcon } from "lucide-vue-next";
 import type { ScriptRecord } from "~~/shared/types/script";
 import type {
   PlannerItemInput,
@@ -10,8 +10,14 @@ import { groupPlannerItems } from "~~/shared/utils/plan";
 import { planService } from "~/services/plan.service";
 import { scriptService } from "~/services/script.service";
 
+const PLANNER_VIEW_KEY = "openfranz:planner-view";
+const PLANNER_VIEWS = ["weeks", "calendar"] as const;
+type PlannerView = (typeof PLANNER_VIEWS)[number];
+
 const items = shallowRef<PlannerItemRecord[]>([]);
 const scripts = shallowRef<ScriptRecord[]>([]);
+const view = ref<PlannerView>("weeks");
+const defaultDate = ref<string | undefined>();
 const editing = ref<PlannerItemRecord | null>(null);
 const creating = ref(false);
 const loading = ref(true);
@@ -35,6 +41,11 @@ const draftedCount = computed(
 const publishedCount = computed(
   () => items.value.filter((item) => item.status === "published").length,
 );
+
+function localTodayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 
 function errorMessage(cause: unknown): string {
   if (cause instanceof Error && cause.message.length > 0) return cause.message;
@@ -60,9 +71,19 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(() => {
+  const saved = window.localStorage.getItem(PLANNER_VIEW_KEY);
+  if (saved === "weeks" || saved === "calendar") view.value = saved;
 
-function startCreate() {
+  void load();
+});
+
+watch(view, (next) => {
+  window.localStorage.setItem(PLANNER_VIEW_KEY, next);
+});
+
+function startCreate(date?: string) {
+  defaultDate.value = date;
   creating.value = true;
   editing.value = null;
 }
@@ -70,11 +91,13 @@ function startCreate() {
 function startEdit(item: PlannerItemRecord) {
   editing.value = item;
   creating.value = false;
+  defaultDate.value = undefined;
 }
 
 function cancel() {
   creating.value = false;
   editing.value = null;
+  defaultDate.value = undefined;
 }
 
 async function save(input: PlannerItemInput) {
@@ -90,6 +113,7 @@ async function save(input: PlannerItemInput) {
 
     creating.value = false;
     editing.value = null;
+    defaultDate.value = undefined;
     await load();
   } catch (cause) {
     error.value = errorMessage(cause);
@@ -156,10 +180,36 @@ async function remove(item: PlannerItemRecord) {
           </span>
         </div>
       </div>
-      <button class="primary" type="button" @click="startCreate">
-        <PlusIcon class="icon" aria-hidden="true" />
-        New item
-      </button>
+      <div class="header-actions">
+        <div class="view-switch" role="tablist" aria-label="Planner view">
+          <button
+            class="view-button"
+            :class="{ active: view === 'weeks' }"
+            type="button"
+            role="tab"
+            :aria-selected="view === 'weeks'"
+            @click="view = 'weeks'"
+          >
+            <LayoutListIcon class="view-icon" aria-hidden="true" />
+            Weeks
+          </button>
+          <button
+            class="view-button"
+            :class="{ active: view === 'calendar' }"
+            type="button"
+            role="tab"
+            :aria-selected="view === 'calendar'"
+            @click="view = 'calendar'"
+          >
+            <CalendarDaysIcon class="view-icon" aria-hidden="true" />
+            Calendar
+          </button>
+        </div>
+        <button class="primary" type="button" @click="startCreate()">
+          <PlusIcon class="icon" aria-hidden="true" />
+          New item
+        </button>
+      </div>
     </header>
 
     <p v-if="error" class="error" role="alert">{{ error }}</p>
@@ -172,6 +222,7 @@ async function remove(item: PlannerItemRecord) {
           <PlannerItemEditor
             v-if="creating || editing"
             :item="editing"
+            :default-date="defaultDate"
             :scripts="scripts"
             :saving="saving"
             @save="save"
@@ -179,12 +230,20 @@ async function remove(item: PlannerItemRecord) {
           />
 
           <PlannerBoard
-            v-else
+            v-else-if="view === 'weeks'"
             :groups="groups"
             :scripts="scripts"
             @edit="startEdit"
             @remove="remove"
             @cycle="cycleStatus"
+          />
+
+          <PlannerCalendar
+            v-else
+            :items="items"
+            :today-iso="localTodayIso()"
+            @edit="startEdit"
+            @new="startCreate"
           />
         </template>
       </div>
@@ -263,6 +322,49 @@ async function remove(item: PlannerItemRecord) {
   height: 13px;
 }
 
+.header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-switch {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+}
+
+.view-button {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.view-button:hover,
+.view-button.active {
+  background: color-mix(in oklab, var(--card) 85%, transparent);
+  color: var(--foreground);
+}
+
+.view-icon {
+  width: 13px;
+  height: 13px;
+}
+
 .planner-body {
   display: flex;
   min-height: 0;
@@ -295,6 +397,13 @@ async function remove(item: PlannerItemRecord) {
 @media (max-width: 767px) {
   .planner-header {
     min-height: 56px;
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .planner-pane {

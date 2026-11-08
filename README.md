@@ -37,7 +37,7 @@ Most writing tools hand you a blank page and a generic model. OpenFranz keeps th
 ## Workspace
 
 - **Chat** - talk to the agent, attach images, attach a brand, stop mid-turn
-- **Files** - browse, search, and preview the shared library
+- **Knowledge** - browse, search, and preview the shared library
 - **Brands** - keep product facts, audience, tone, features, and pricing
 - **Ingest** - save text, URLs, and public Instagram posts into the library
 
