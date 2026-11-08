@@ -60,10 +60,14 @@ onBeforeUnmount(() => {
   mobileQuery = null;
 });
 
-const activeView = computed<"chat" | "files" | "brands" | "ingest">(() => {
+const activeView = computed<
+  "chat" | "files" | "brands" | "ingest" | "scripts" | "planner"
+>(() => {
   if (route.query.view === "files") return "files";
   if (route.query.view === "brands") return "brands";
   if (route.query.view === "ingest") return "ingest";
+  if (route.query.view === "scripts") return "scripts";
+  if (route.query.view === "planner") return "planner";
   return "chat";
 });
 
@@ -79,6 +83,8 @@ const topbarTitle = computed(() => {
   if (activeView.value === "files") return "Files";
   if (activeView.value === "brands") return "Brands";
   if (activeView.value === "ingest") return "Ingest";
+  if (activeView.value === "scripts") return "Scripts";
+  if (activeView.value === "planner") return "Planner";
   return activeTitle.value;
 });
 
@@ -187,6 +193,8 @@ async function removeChat(id: string) {
         <LazyVfsExplorer v-if="activeView === 'files'" />
         <LazyBrandsExplorer v-else-if="activeView === 'brands'" />
         <LazyIngestExplorer v-else-if="activeView === 'ingest'" />
+        <LazyScriptsExplorer v-else-if="activeView === 'scripts'" />
+        <LazyPlannerExplorer v-else-if="activeView === 'planner'" />
       </KeepAlive>
 
       <template v-if="activeView === 'chat'">
