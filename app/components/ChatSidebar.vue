@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
+  BookOpenIcon,
   CalendarDaysIcon,
   ClapperboardIcon,
-  FolderIcon,
   InboxIcon,
   LogOutIcon,
   MessageSquareIcon,
@@ -21,7 +21,7 @@ const props = withDefaults(
     showToggle?: boolean;
     activeView?:
       | "chat"
-      | "files"
+      | "knowledge"
       | "brands"
       | "ingest"
       | "scripts"
@@ -102,11 +102,11 @@ const initials = computed(() => {
       </NuxtLink>
       <NuxtLink
         class="view-link"
-        :class="{ active: activeView === 'files' }"
-        to="/app?view=files"
+        :class="{ active: activeView === 'knowledge' }"
+        to="/app?view=knowledge"
       >
-        <FolderIcon class="icon" />
-        Files
+        <BookOpenIcon class="icon" />
+        Knowledge
       </NuxtLink>
       <NuxtLink
         class="view-link"

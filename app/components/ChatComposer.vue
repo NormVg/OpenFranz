@@ -92,6 +92,13 @@ const filteredBrands = computed(() => {
   );
 });
 
+const brandLabel = computed(() => {
+  if (!selectedBrand.value) return "";
+  return selectedProduct.value
+    ? `${selectedBrand.value.name} · ${selectedProduct.value.name}`
+    : selectedBrand.value.name;
+});
+
 const canSend = computed(
   () =>
     (props.modelValue.trim().length > 0 || attachments.value.length > 0) &&
@@ -182,6 +189,7 @@ function backToBrands() {
 function clearBrand() {
   selectedBrand.value = null;
   selectedProduct.value = null;
+  brandMenuOpen.value = false;
 }
 
 function writeAscii(view: DataView, offset: number, value: string) {
@@ -461,22 +469,6 @@ onBeforeUnmount(() => {
       </figure>
     </div>
 
-    <div v-if="selectedBrand" class="brand-chip">
-      <TagIcon class="brand-chip-icon" aria-hidden="true" />
-      <span class="brand-chip-name">
-        {{ selectedBrand.name }}
-        <template v-if="selectedProduct"> · {{ selectedProduct.name }}</template>
-      </span>
-      <button
-        class="brand-chip-remove"
-        type="button"
-        aria-label="Remove brand"
-        @click="clearBrand"
-      >
-        <XIcon class="brand-chip-x" aria-hidden="true" />
-      </button>
-    </div>
-
     <label class="sr-only" for="chat-composer">Message the agent</label>
     <textarea
       id="chat-composer"
@@ -520,15 +512,19 @@ onBeforeUnmount(() => {
           <ImagePlusIcon class="icon" />
         </button>
         <button
-          class="icon-button attach"
+          class="icon-button attach brand-toggle"
+          :class="{ selected: Boolean(selectedBrand) }"
           type="button"
           :disabled="disabled || busy"
-          aria-label="Attach a brand"
-          title="Attach a brand"
           :aria-expanded="brandMenuOpen"
+          :aria-label="selectedBrand ? `Change brand, ${brandLabel}` : 'Attach a brand'"
+          :title="selectedBrand ? `Brand: ${brandLabel}` : 'Attach a brand'"
           @click="toggleBrandMenu"
         >
           <TagIcon class="icon" />
+          <span class="brand-toggle-label" aria-hidden="true">
+            {{ brandLabel }}
+          </span>
         </button>
         <button
           class="icon-button attach deep-toggle"
@@ -619,6 +615,19 @@ onBeforeUnmount(() => {
             aria-label="Search brands"
           />
         </div>
+
+        <button
+          v-if="selectedBrand"
+          class="brand-remove"
+          type="button"
+          aria-label="Remove brand"
+          @click="clearBrand"
+        >
+          <XIcon class="brand-remove-icon" aria-hidden="true" />
+          <span class="brand-remove-label">
+            Remove {{ selectedBrand.name }}
+          </span>
+        </button>
 
         <p v-if="brandLoading" class="brand-state">Loading...</p>
         <p v-else-if="filteredBrands.length === 0" class="brand-state">
@@ -755,51 +764,40 @@ onBeforeUnmount(() => {
   height: 11px;
 }
 
-.brand-chip {
-  display: inline-flex;
+.brand-remove {
+  display: flex;
+  width: calc(100% - 16px);
   align-items: center;
-  gap: 5px;
-  margin: 10px 12px 0;
-  padding: 3px 6px 3px 8px;
-  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--muted) 35%, transparent);
-  font-size: 11px;
-  color: var(--muted-foreground);
+  gap: 8px;
+  margin: 0 8px 6px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in oklab, var(--destructive) 30%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--destructive);
+  font-size: 12px;
+  text-align: left;
+  transition: background-color 150ms ease-out;
 }
 
-.brand-chip-icon {
-  width: 11px;
-  height: 11px;
+.brand-remove:hover {
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
 }
 
-.brand-chip-name {
-  max-width: 180px;
+.brand-remove:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--destructive) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.brand-remove-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.brand-remove-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.brand-chip-remove {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-}
-
-.brand-chip-remove:hover {
-  background: color-mix(in oklab, var(--foreground) 10%, transparent);
-  color: var(--foreground);
-}
-
-.brand-chip-x {
-  width: 10px;
-  height: 10px;
 }
 
 .brand-backdrop {
@@ -1019,6 +1017,54 @@ onBeforeUnmount(() => {
 .icon-button.attach .icon {
   width: 15px;
   height: 15px;
+}
+
+.brand-toggle {
+  width: auto;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  transition:
+    max-width 200ms ease-out,
+    padding 200ms ease-out,
+    gap 200ms ease-out,
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.brand-toggle.selected {
+  max-width: 172px;
+  padding: 0 10px;
+  gap: 5px;
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.brand-toggle.selected:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 88%, transparent);
+  color: var(--background);
+}
+
+.brand-toggle-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0;
+  transition:
+    max-width 200ms ease-out,
+    opacity 150ms ease-out 60ms;
+}
+
+.brand-toggle.selected .brand-toggle-label {
+  max-width: 124px;
+  opacity: 1;
 }
 
 .deep-toggle {

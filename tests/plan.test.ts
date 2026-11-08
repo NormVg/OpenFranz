@@ -8,6 +8,7 @@ import {
   PLAN_PLATFORMS,
   PLAN_PLATFORM_LABELS,
   PLAN_STATUS_LABELS,
+  buildPlannerMonth,
   groupPlannerItems,
   isIsoDateString,
 } from "../shared/utils/plan.ts";
@@ -107,4 +108,40 @@ test("bands planner items into calendar weeks from Monday", () => {
   assert.deepEqual(byId.thisWeek, [2, 3, 4]);
   assert.deepEqual(byId.nextWeek, [5]);
   assert.deepEqual(byId.later, [6, 7]);
+});
+
+test("builds a stable Monday-first month grid", () => {
+  // November 2026 starts on a Sunday, so the grid opens on Monday, Oct 26
+  // and closes six weeks later on Sunday, Dec 6.
+  const cells = buildPlannerMonth(new Date(2026, 10, 8));
+
+  assert.equal(cells.length, 42);
+  assert.equal(cells[0].iso, "2026-10-26");
+  assert.equal(cells[0].inMonth, false);
+  assert.equal(cells[41].iso, "2026-12-06");
+  assert.equal(new Date(`${cells[0].iso}T00:00:00`).getDay(), 1);
+
+  const inMonth = cells.filter((cell) => cell.inMonth);
+
+  assert.equal(inMonth.length, 30);
+  assert.equal(inMonth[0].iso, "2026-11-01");
+  assert.equal(inMonth[29].iso, "2026-11-30");
+});
+
+test("month grid shows every calendar date exactly once", () => {
+  // January 2027 starts on a Friday, so the grid opens Monday, Dec 28, 2026.
+  const cells = buildPlannerMonth(new Date(2027, 0, 15));
+  const seen = new Set<string>();
+
+  for (const cell of cells) {
+    assert.ok(isIsoDateString(cell.iso));
+    assert.equal(seen.has(cell.iso), false);
+    seen.add(cell.iso);
+  }
+
+  assert.equal(seen.size, 42);
+  assert.equal(cells[0].iso, "2026-12-28");
+
+  const inMonth = cells.filter((cell) => cell.inMonth);
+  assert.equal(inMonth.length, 31);
 });

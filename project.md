@@ -35,7 +35,7 @@ OpenFranz is a Nuxt 4 application with a shared workspace, an Eve agent runtime,
 ### Workspace
 
 - Google authentication through Better Auth
-- Chat, Files, Brands, and Ingest views inside one application shell
+- Chat, Knowledge, Brands, and Ingest views inside one application shell
 - A shared workspace with no per-user filesystem or chat isolation
 - Image attachments, collapsible reasoning, response copying, stop control, and scroll management in chat
 
