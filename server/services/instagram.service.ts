@@ -4,7 +4,7 @@ import type {
   InstagramMediaResult,
 } from "../../shared/utils/instagram";
 import {
-  isInstagramPostUrl,
+  canonicalInstagramUrl,
   normalizeInstagramPayload,
 } from "../../shared/utils/instagram";
 import { ServiceError } from "../utils/service-error";
@@ -12,9 +12,9 @@ import { ServiceError } from "../utils/service-error";
 export async function fetchInstagramMedia(
   url: string,
 ): Promise<InstagramMediaResult> {
-  const sourceUrl = url.trim();
+  const sourceUrl = canonicalInstagramUrl(url);
 
-  if (!isInstagramPostUrl(sourceUrl)) {
+  if (!sourceUrl) {
     throw new ServiceError(
       400,
       "Only public Instagram post or reel URLs are supported.",
