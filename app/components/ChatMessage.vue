@@ -10,6 +10,7 @@ import {
 import { MarkdownRender } from "markstream-vue";
 import { parseBrandContext } from "~~/shared/utils/brand-context";
 import { parseDeepMode } from "~~/shared/utils/deep-mode";
+import { parseScriptSegments } from "~~/shared/utils/script-block";
 
 const props = defineProps<{
   message: EveMessage;
@@ -166,17 +167,32 @@ onBeforeUnmount(() => {
       </div>
 
       <template v-for="(part, index) in visibleParts" :key="index">
-        <MarkdownRender
-          v-if="part.type === 'text' && !isUser"
-          class="markdown"
-          :content="part.text"
-          mode="chat"
-          :final="part.state !== 'streaming'"
-          :smooth-streaming="part.state === 'streaming' ? 'auto' : false"
-          :typewriter="part.state === 'streaming' ? 'simple' : false"
-          :fade="false"
-          :is-dark="isDark"
-        />
+        <template v-if="part.type === 'text' && !isUser">
+          <template
+            v-for="(segment, segIndex) in parseScriptSegments(part.text)"
+            :key="segIndex"
+          >
+            <ScriptCard
+              v-if="segment.type === 'script'"
+              :title="segment.title"
+              :brand="segment.brand"
+              :content="segment.content"
+              :streaming="!segment.closed && isPartStreaming(part)"
+              :is-dark="isDark"
+            />
+            <MarkdownRender
+              v-else
+              class="markdown"
+              :content="segment.text"
+              mode="chat"
+              :final="part.state !== 'streaming'"
+              :smooth-streaming="part.state === 'streaming' ? 'auto' : false"
+              :typewriter="part.state === 'streaming' ? 'simple' : false"
+              :fade="false"
+              :is-dark="isDark"
+            />
+          </template>
+        </template>
         <p v-else-if="part.type === 'text'" class="user-text">
           {{ displayText(part.text) }}
         </p>
