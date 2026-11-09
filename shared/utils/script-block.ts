@@ -148,30 +148,54 @@ export type ScriptContentBlock =
     }
   | { type: "markdown"; text: string };
 
-const BEAT_LINE =
-  /^[ \t]*(\d+(?:\.\d+)?(?:[ \t]*-[ \t]*\d+(?:\.\d+)?)?)[ \t]*s?[ \t]*\|[ \t]*(.*)$/;
+// Models drift between separators and dash glyphs. The separator after the
+// timing is usually a pipe but sometimes a colon ("0-2s: on-screen: ..."), and
+// the range dash arrives as ASCII, U+2011 non-breaking, or an en/em dash
+// ("0‑2s"). All of these open a beat; labels inside a segment always use a
+// colon. The matched time and label are normalized back to ASCII hyphens for
+// display.
+const DASH_CLASS = "\\u2010-\\u2014-";
+const NORMALIZE_DASHES = /[-\u2010-\u2014]/g;
+const BEAT_LINE = new RegExp(
+  `^[ \\t]*(\\d+(?:\\.\\d+)?(?:[ \\t]*[${DASH_CLASS}][ \\t]*\\d+(?:\\.\\d+)?)?)[ \\t]*s?[ \\t]*(?:\\||:)[ \\t]*(.*)$`,
+);
 const HEADING_LINE = /^[ \t]{0,3}(#{1,6})[ \t]+(.+)$/;
 const SEGMENT_SPLIT = /[ \t]*\|[ \t]*/;
-const LABELED_SEGMENT = /^([A-Za-z][A-Za-z -]*?)[ \t]*:[ \t]*(.*)$/;
+// Beats sometimes chain labeled segments with a sentence period instead of a
+// pipe ("on-screen: ... . spoken: ..."). A sentence end followed by a
+// lowercase hyphenated label and a colon is that drift, not prose — split
+// there too. Capitalized words are left alone: after a period those are
+// overwhelmingly new sentences.
+const CHAINED_LABEL_SPLIT =
+  /(?<=[.\u2026?!])[ \t]+(?=[a-z][a-z\u2010-\u2014-]{1,15}:)/;
+const LABELED_SEGMENT = new RegExp(
+  `^([A-Za-z][A-Za-z ${DASH_CLASS}]*?)[ \\t]*:[ \\t]*(.*)$`,
+);
 
 function parseBeatLine(line: string) {
   const match = line.match(BEAT_LINE);
   if (!match) return null;
 
-  const time = `${match[1]?.trim() ?? ""}s`;
+  const time = `${(match[1] ?? "").replace(NORMALIZE_DASHES, "-").trim()}s`;
   const segments: ScriptBeatSegment[] = [];
 
-  for (const part of (match[2] ?? "").split(SEGMENT_SPLIT)) {
-    if (part.trim().length === 0) continue;
+  for (const pipePart of (match[2] ?? "").split(SEGMENT_SPLIT)) {
+    for (const part of pipePart.split(CHAINED_LABEL_SPLIT)) {
+      if (part.trim().length === 0) continue;
 
-    const labeled = part.match(LABELED_SEGMENT);
-    if (labeled) {
-      segments.push({
-        label: labeled[1]?.trim().toLowerCase() ?? null,
-        value: labeled[2] ?? "",
-      });
-    } else {
-      segments.push({ label: null, value: part });
+      const labeled = part.match(LABELED_SEGMENT);
+      if (labeled) {
+        segments.push({
+          label:
+            (labeled[1] ?? "")
+              .replace(NORMALIZE_DASHES, "-")
+              .trim()
+              .toLowerCase() || null,
+          value: labeled[2] ?? "",
+        });
+      } else {
+        segments.push({ label: null, value: part });
+      }
     }
   }
 

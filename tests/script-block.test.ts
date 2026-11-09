@@ -167,3 +167,124 @@ test("content without beats is pure markdown", () => {
 test("empty content yields no blocks", () => {
   assert.deepEqual(parseScriptContent(""), []);
 });
+
+test("parses colon-form beats after the timing", () => {
+  const blocks = parseScriptContent(
+    "0-2s: on-screen: Earth-from-space on black | spoken: Hold the planet",
+  );
+
+  assert.equal(blocks.length, 1);
+  if (blocks[0]?.type === "beats") {
+    assert.equal(blocks[0].beats.length, 1);
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "0-2s");
+    assert.deepEqual(beat?.segments, [
+      { label: "on-screen", value: "Earth-from-space on black" },
+      { label: "spoken", value: "Hold the planet" },
+    ]);
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("parses a colon beat with a single labeled segment", () => {
+  const blocks = parseScriptContent("0-2s: on-screen: Cold pour in macro");
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "0-2s");
+    assert.deepEqual(beat?.segments, [
+      { label: "on-screen", value: "Cold pour in macro" },
+    ]);
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("parses a colon beat with an unlabeled note", () => {
+  const blocks = parseScriptContent("15s: Just a note here");
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "15s");
+    assert.deepEqual(beat?.segments, [
+      { label: null, value: "Just a note here" },
+    ]);
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("parses typographic dashes in the time range", () => {
+  const source =
+    "0\u20112s | on-screen: Split\u2011screen pour | spoken: \u201CWait for it\u201D";
+  const blocks = parseScriptContent(source);
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "0-2s");
+    assert.deepEqual(beat?.segments, [
+      { label: "on-screen", value: "Split\u2011screen pour" },
+      { label: "spoken", value: "\u201CWait for it\u201D" },
+    ]);
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("normalizes a typographic dash inside a segment label", () => {
+  const blocks = parseScriptContent("3\u20135s | on\u2011screen: Product close-up");
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "3-5s");
+    assert.deepEqual(beat?.segments, [
+      { label: "on-screen", value: "Product close-up" },
+    ]);
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("splits labeled segments chained by a sentence period", () => {
+  const source = [
+    "0\u20112s | on-screen: split\u2011screen; left side a dull, grayscale drip",
+    'coffee, right side a vibrant cold\u2011brew with condensation; text overlay',
+    '"Ordinary Brew vs Acme Cold Brew". spoken: \u201CWait for it.\u201D',
+  ].join(" ");
+
+  const blocks = parseScriptContent(source);
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.time, "0-2s");
+    assert.equal(beat?.segments.length, 2);
+    assert.equal(beat?.segments[0]?.label, "on-screen");
+    assert.equal(beat?.segments[1]?.label, "spoken");
+    assert.equal(beat?.segments[1]?.value, "\u201CWait for it.\u201D");
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("does not split a beat on a capitalized sentence after a period", () => {
+  const blocks = parseScriptContent(
+    "4-8s | on-screen: A hand lifts the glass. Ready? spoken: none",
+  );
+
+  if (blocks[0]?.type === "beats") {
+    const beat = blocks[0].beats[0];
+    assert.equal(beat?.segments.length, 2);
+    assert.equal(beat?.segments[1]?.label, "spoken");
+    assert.equal(beat?.segments[1]?.value, "none");
+  } else {
+    assert.fail("expected a beats block");
+  }
+});
+
+test("a sentence starting with a number but no beat shape stays markdown", () => {
+  const blocks = parseScriptContent("18 hours: the steep time that matters");
+
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0]?.type, "markdown");
+});

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { CalendarDaysIcon, LayoutListIcon, PlusIcon } from "lucide-vue-next";
+import {
+  CalendarDaysIcon,
+  LayoutListIcon,
+  PlusIcon,
+  TargetIcon,
+} from "lucide-vue-next";
 import type { ScriptRecord } from "~~/shared/types/script";
 import type {
   PlannerItemInput,
@@ -11,7 +16,7 @@ import { planService } from "~/services/plan.service";
 import { scriptService } from "~/services/script.service";
 
 const PLANNER_VIEW_KEY = "openfranz:planner-view";
-const PLANNER_VIEWS = ["weeks", "calendar"] as const;
+const PLANNER_VIEWS = ["weeks", "calendar", "strategy"] as const;
 type PlannerView = (typeof PLANNER_VIEWS)[number];
 
 const items = shallowRef<PlannerItemRecord[]>([]);
@@ -73,7 +78,9 @@ async function load() {
 
 onMounted(() => {
   const saved = window.localStorage.getItem(PLANNER_VIEW_KEY);
-  if (saved === "weeks" || saved === "calendar") view.value = saved;
+  if (saved === "weeks" || saved === "calendar" || saved === "strategy") {
+    view.value = saved;
+  }
 
   void load();
 });
@@ -204,8 +211,24 @@ async function remove(item: PlannerItemRecord) {
             <CalendarDaysIcon class="view-icon" aria-hidden="true" />
             Calendar
           </button>
+          <button
+            class="view-button"
+            :class="{ active: view === 'strategy' }"
+            type="button"
+            role="tab"
+            :aria-selected="view === 'strategy'"
+            @click="view = 'strategy'"
+          >
+            <TargetIcon class="view-icon" aria-hidden="true" />
+            Strategy
+          </button>
         </div>
-        <button class="primary" type="button" @click="startCreate()">
+        <button
+          v-if="view !== 'strategy'"
+          class="primary"
+          type="button"
+          @click="startCreate()"
+        >
           <PlusIcon class="icon" aria-hidden="true" />
           New item
         </button>
@@ -237,6 +260,8 @@ async function remove(item: PlannerItemRecord) {
             @remove="remove"
             @cycle="cycleStatus"
           />
+
+          <PlannerStrategy v-else-if="view === 'strategy'" />
 
           <PlannerCalendar
             v-else

@@ -344,7 +344,7 @@ onBeforeUnmount(() => {
   z-index: 1;
   display: flex;
   width: 100%;
-  max-width: 672px;
+  max-width: 840px;
   flex-direction: column;
   gap: 20px;
 }
@@ -431,7 +431,7 @@ onBeforeUnmount(() => {
 .conversation-content {
   display: flex;
   width: 100%;
-  max-width: 672px;
+  max-width: 840px;
   flex-direction: column;
   gap: 16px;
   margin: 0 auto;
@@ -441,7 +441,7 @@ onBeforeUnmount(() => {
 .composer-wrap {
   display: flex;
   width: 100%;
-  max-width: 672px;
+  max-width: 840px;
   flex-direction: column;
   gap: 8px;
   margin: 0 auto;
@@ -456,15 +456,5 @@ onBeforeUnmount(() => {
   font-size: 13px;
   line-height: 1.5;
   color: var(--destructive);
-}
-
-@media (min-width: 640px) {
-  .conversation-content {
-    padding: 24px 24px 32px;
-  }
-
-  .composer-wrap {
-    padding: 0 24px 24px;
-  }
 }
 </style>
