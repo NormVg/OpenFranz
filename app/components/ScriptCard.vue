@@ -138,9 +138,9 @@ onBeforeUnmount(() => {
 .script-card {
   margin: 6px 0;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in oklab, var(--border) 86%, var(--foreground) 14%);
   border-radius: 12px;
-  background: color-mix(in oklab, var(--card) 55%, var(--background));
+  background: color-mix(in oklab, var(--card) 78%, var(--background));
   animation: card-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px 10px;
+  padding: 14px 18px 12px;
   border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   animation: head-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
 }
@@ -177,8 +177,8 @@ onBeforeUnmount(() => {
 }
 
 .script-title {
-  margin-top: 3px;
-  font-size: 14.5px;
+  margin-top: 4px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.01em;
@@ -204,19 +204,19 @@ onBeforeUnmount(() => {
 }
 
 .script-body {
-  padding: 14px 16px;
+  padding: 16px 18px;
   animation: body-in 360ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
 }
 
 .script-body > * + * {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .script-heading {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: -0.005em;
 }
@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   animation: actions-in 420ms ease-out 160ms both;
 }
