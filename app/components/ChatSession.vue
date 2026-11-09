@@ -14,6 +14,7 @@ import {
   type BrandContext,
 } from "~~/shared/utils/brand-context";
 import { withDeepMode } from "~~/shared/utils/deep-mode";
+import { isStaleSessionError } from "~~/shared/utils/session-recovery";
 import { useChatStore } from "~/stores/chat";
 
 const props = defineProps<{
@@ -48,7 +49,22 @@ const { messages, status, error, view, session, events, send, cancel } =
       : undefined,
     initialEvents: props.initialEvents ? plain(props.initialEvents) : undefined,
     resume: props.resume,
+    onError: onSessionError,
   });
+
+/**
+ * Safety net for the race the opening probe cannot see: the stream died after
+ * the probe answered, and the eve client has now surfaced the failure. A dead
+ * cursor would hang every future open of this chat, so recover it instead.
+ */
+function onSessionError(cause: Error): void {
+  if (!isStaleSessionError(cause)) return;
+
+  const staleSessionId = props.initialSession?.sessionId;
+  if (!props.chatId || !staleSessionId) return;
+
+  void chatStore.recoverStaleSession(props.chatId, staleSessionId);
+}
 
 const scroller = ref<HTMLElement | null>(null);
 const contentRoot = ref<HTMLElement | null>(null);

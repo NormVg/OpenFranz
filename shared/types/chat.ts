@@ -10,6 +10,7 @@ export interface ChatRecord {
 
 export interface ChatPatch {
   title?: string;
-  session?: ClientSessionState;
+  /** `null` clears the persisted session so the chat opens fresh. */
+  session?: ClientSessionState | null;
   events?: SessionStreamEvent[];
 }
