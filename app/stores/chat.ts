@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import type { ClientSessionState, SessionStreamEvent } from "eve/client";
 import type { ChatPatch, ChatRecord } from "~~/shared/types/chat";
 import { chatService } from "~/services/chat.service";
+import { eveSessionService } from "~/services/eve-session.service";
 
 const ACTIVE_CHAT_KEY = "openfranz:active-chat";
 
@@ -35,6 +36,9 @@ export const useChatStore = defineStore("chat", () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  /** Sessions recovered in this store's lifetime; persisting them is blocked. */
+  const clearedSessionIds = new Set<string>();
+
   async function hydrate() {
     if (hydrated.value) return;
 
@@ -48,11 +52,7 @@ export const useChatStore = defineStore("chat", () => {
         chats.value.find((chat) => chat.id === savedId) ?? chats.value[0];
 
       if (saved) {
-        activeChatId.value = saved.id;
-        initialSession.value = saved.session;
-        initialEvents.value = saved.events;
-        viewKey.value += 1;
-        writeActiveChatId(saved.id);
+        await activateChat(saved);
       }
 
       hydrated.value = true;
@@ -73,13 +73,61 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   async function selectChat(id: string) {
-    const chat = await chatService.get(id);
+    await activateChat(await chatService.get(id));
+  }
 
+  async function activateChat(chat: ChatRecord) {
     activeChatId.value = chat.id;
     initialSession.value = chat.session;
     initialEvents.value = chat.events;
     viewKey.value += 1;
     writeActiveChatId(chat.id);
+
+    if (chat.session) void recoverSessionIfStale(chat.id, chat.session);
+  }
+
+  /**
+   * Probes the persisted cursor in the background; a definitive 404 or stranded
+   * answer recovers the chat immediately instead of letting the eve client
+   * retry a dead stream for ~43s while the composer hangs on "Resuming".
+   */
+  async function recoverSessionIfStale(
+    chatId: string,
+    cursor: ClientSessionState,
+  ) {
+    if (clearedSessionIds.has(cursor.sessionId)) return;
+    if ((await eveSessionService.probe(cursor.sessionId)) !== "recover") return;
+    await recoverStaleSession(chatId, cursor.sessionId);
+  }
+
+  /**
+   * Drops a session the eve runtime can no longer execute. Both the cursor and
+   * its recorded events are cleared: `initialEvents` must be an ordered prefix
+   * of one session's stream, and events from a dead session collide by
+   * position with the next session's replay. Safe to call repeatedly; only
+   * the first call persists the cleared state.
+   */
+  async function recoverStaleSession(chatId: string, staleSessionId: string) {
+    const firstRecovery = !clearedSessionIds.has(staleSessionId);
+    clearedSessionIds.add(staleSessionId);
+
+    // Present the chat fresh only while the stale cursor is still mounted.
+    if (
+      activeChatId.value === chatId &&
+      initialSession.value?.sessionId === staleSessionId
+    ) {
+      initialSession.value = undefined;
+      initialEvents.value = [];
+      viewKey.value += 1;
+    }
+
+    if (!firstRecovery) return;
+
+    try {
+      await persistSnapshot(chatId, { session: null, events: [] });
+    } catch {
+      setError("Unable to save this chat. Please try again.");
+    }
   }
 
   async function addChat(title: string) {
@@ -100,6 +148,10 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   async function persistSnapshot(id: string, patch: ChatPatch) {
+    // An instance mounted on a recovered session can still flush its dead
+    // cursor on unmount; never persist a cleared session id back over it.
+    if (patch.session && clearedSessionIds.has(patch.session.sessionId)) return;
+
     const chat = await chatService.update(id, patch);
     const index = chats.value.findIndex((entry) => entry.id === id);
 
@@ -127,6 +179,7 @@ export const useChatStore = defineStore("chat", () => {
     addChat,
     removeChat,
     persistSnapshot,
+    recoverStaleSession,
     setError,
   };
 });
