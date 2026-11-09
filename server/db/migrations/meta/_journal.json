@@ -43,6 +43,13 @@
       "when": 1794121467549,
       "tag": "0005_deep_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794200926399,
+      "tag": "0006_fresh_silverclaw",
+      "breakpoints": true
     }
   ]
 }
